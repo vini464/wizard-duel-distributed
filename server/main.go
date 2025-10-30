@@ -64,7 +64,7 @@ func Reply(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(api.Message{Type: "ERR"})
 		return
 	}
-	
+
 	for ONCRITICALREGION || COMMANDQUEUE.Front() != nil && COMMANDQUEUE.Front().TimeStamp < askingtimestamp { // fica preso aqui até o outro servidor ter prioridade
 	}
 	w.WriteHeader(http.StatusOK)
@@ -75,12 +75,12 @@ func removeDuplicates(array []api.Command) []api.Command {
 	seen := make(map[string]api.Command)
 	unique := []api.Command{}
 	for _, e := range array {
-		if c, ok := seen[e.ID]; !ok || c.TimeStamp <= e.TimeStamp{
+		if c, ok := seen[e.ID]; !ok || c.TimeStamp <= e.TimeStamp {
 			seen[e.ID] = e
 		}
 	}
 	for _, c := range seen {
-			unique = append(unique, c)
+		unique = append(unique, c)
 	}
 	return unique
 }
@@ -144,7 +144,7 @@ func syncLogs(w http.ResponseWriter, r *http.Request) {
 
 func checkPeerHealth(peerAddr string) {
 	for {
-		resp, err := http.Get("http://"+peerAddr + DEFAULTPORT + "/api/checkhealth")
+		resp, err := http.Get("http://" + peerAddr + DEFAULTPORT + "/api/checkhealth")
 
 		MAPMUTEX.Lock()
 		if err != nil || resp.Status != "200 OK" {
@@ -177,17 +177,20 @@ func handleRequests() {
 
 func executeCommands() {
 	for {
-		if (len(COMMANDQUEUE) > 0) {
+		if len(COMMANDQUEUE) > 0 {
 			Request(COMMANDQUEUE.Front().TimeStamp)
 			fmt.Println("[debug] executing a command")
+			c := COMMANDQUEUE.Pop()
 			// propagando informação
+			propagate(*c)
 			ONCRITICALREGION = false
 		}
 	}
 }
 
 func update(w http.ResponseWriter, r *http.Request) {
-	
+	fmt.Println("Executando codigo")
+	w.WriteHeader(http.StatusOK)
 }
 
 func propagate(command api.Command) {
@@ -195,7 +198,7 @@ func propagate(command api.Command) {
 	for peer, alive := range SERVERHEALTH {
 		if alive {
 			com, _ := json.Marshal(command)
-			http.Post("http://" + peer + DEFAULTPORT + "api/update", "application/json", bytes.NewBuffer(com))
+			http.Post("http://"+peer+DEFAULTPORT+"api/update", "application/json", bytes.NewBuffer(com))
 		}
 	}
 }
@@ -223,5 +226,6 @@ func main() {
 			http.Post(peer+DEFAULTPORT+"/api/sync", "application/json", bytes.NewBuffer(logs))
 		}
 	}
+	go executeCommands()
 	handleRequests()
 }
