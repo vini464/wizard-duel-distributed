@@ -101,25 +101,21 @@ func getHealthCheck(w http.ResponseWriter, r *http.Request) {
 }
 
 func syncLogs(w http.ResponseWriter, r *http.Request) {
-	var bufferedBody []byte
-	var i, err = r.Body.Read(bufferedBody)
-	if err != nil || i <= 0 {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(api.Message{Type: "SyncResponse"})
-		return
-	}
+	var message api.Message
+	json.NewDecoder(r.Body).Decode(&message)
 	var bodyMessage []api.Command
-	err = json.Unmarshal(bufferedBody, &bodyMessage)
+	err := json.Unmarshal(message.Commands, &bodyMessage)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(api.Message{Type: "SyncResponse"})
+		json.NewEncoder(w).Encode(api.Message{Type: "ERROR - body"})
 		return
 	}
 	selfLogsBytes, err := os.ReadFile(LOGSPATH)
 	if err != nil {
-		selfLogsBytes, _ = json.Marshal("[]") // inicia um vetor vazio caso não consiga abrir o arquivo de logs
+		selfLogsBytes, _ = json.Marshal([]api.Command{}) // inicia um vetor vazio caso não consiga abrir o arquivo de logs
 	}
 	var logs []api.Command
+	fmt.Println("[debug] : logs ", string(selfLogsBytes))
 	err = json.Unmarshal(selfLogsBytes, &logs)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -149,7 +145,7 @@ func checkPeerHealth(peerAddr string) {
 			fmt.Println("[debug] - ", peerAddr, " - ", resp.Status, " - ", string(respBody))
 		}
 		MAPMUTEX.Unlock()
-		time.Sleep(1 * time.Second)
+		time.Sleep(5 * time.Second)
 	}
 }
 
