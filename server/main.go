@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
+	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -21,6 +21,7 @@ var SERVERHEALTH map[string]bool = make(map[string]bool) // SERVERNAME: isAlive
 var DEFAULTPORT = ":8080"
 var LOGSPATH = "logs/logs.json"
 var COMMANDQUEUE = []api.Command{}
+var MAPMUTEX sync.Mutex
 
 func getToken(timestamp int64) {
 	var wg sync.WaitGroup
@@ -45,17 +46,19 @@ func getToken(timestamp int64) {
 
 func releaseToken(w http.ResponseWriter, r *http.Request) {
 	var bufferedBody []byte
-	var i, err = r.Body.Read(bufferedBody)
-	if err != nil || i <= 0 {
+	var _, err = r.Body.Read(bufferedBody)
+	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(api.Message{Type: "ACK"})
+		json.NewEncoder(w).Encode(api.Message{Type: "ERR"})
 		return
 	}
+	var message api.Message
 	var askingtimestamp int64
-	err = json.Unmarshal(bufferedBody, &askingtimestamp)
-	if err != nil || i <= 0 {
+	err = json.NewDecoder(r.Body).Decode(&message)
+	askingtimestamp, err = strconv.ParseInt(string(message.Commands), 10, 64)
+	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(api.Message{Type: "ACK"})
+		json.NewEncoder(w).Encode(api.Message{Type: "ERR"})
 		return
 	}
 	for HASTOKEN || len(COMMANDQUEUE) > 0 && COMMANDQUEUE[0].TimeStamp < askingtimestamp { // fica preso aqui até o outro servidor ter prioridade
@@ -134,14 +137,18 @@ func syncLogs(w http.ResponseWriter, r *http.Request) {
 func checkPeerHealth(peerAddr string) {
 	for {
 		resp, err := http.Get(peerAddr + DEFAULTPORT + "/api/checkhealth")
-		respBody, _ := io.ReadAll(resp.Body)
+		
+		MAPMUTEX.Lock()
 		if err != nil || resp.Status != "200 OK" {
 			SERVERHEALTH[peerAddr] = false
 			fmt.Println("[debug] - Unable to connect with peer: ", peerAddr)
 		} else {
 			SERVERHEALTH[peerAddr] = true
+			respBody := []byte{}
+			resp.Body.Read(respBody)
+			fmt.Println("[debug] - ", peerAddr, " - ", resp.Status, " - ", string(respBody))
 		}
-		fmt.Println("[debug] - ", peerAddr, " - ", resp.Status, " - ", string(respBody))
+		MAPMUTEX.Unlock()
 		time.Sleep(1 * time.Second)
 	}
 }
@@ -150,9 +157,11 @@ func handleRequests() {
 	http.Handle("GET /api/checkhealth", http.HandlerFunc(getHealthCheck))
 	http.Handle("POST /api/sync", http.HandlerFunc(syncLogs))
 	http.Handle("POST /api/request", http.HandlerFunc(releaseToken))
+	log.Fatal(http.ListenAndServe(SERVERNAME+DEFAULTPORT, nil))
 }
 
 func main() {
+	SERVERNAME = "172.16.103.227"
 
 	// quando um server inicia, ele procura por todos os servidores de 0 a 10 e adiciona no SERVERHEALTH
 	fmt.Println("Server is starting")
@@ -171,5 +180,6 @@ func main() {
 			http.Post(peer+DEFAULTPORT+"/api/sync", "application/json", bytes.NewBuffer(logs))
 		}
 	}
+	handleRequests()
 
 }
