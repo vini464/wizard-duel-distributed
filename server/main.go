@@ -157,7 +157,7 @@ func handleRequests() {
 }
 
 func main() {
-	SERVERNAME = "172.16.103.227"
+	SERVERNAME = "0.0.0.0"
 
 	// quando um server inicia, ele procura por todos os servidores de 0 a 10 e adiciona no SERVERHEALTH
 	fmt.Println("Server is starting")
