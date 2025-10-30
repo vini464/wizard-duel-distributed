@@ -20,6 +20,7 @@ var SERVERNAME = os.Getenv("SERVERNAME")                 // env var SERVERNAME e
 var SERVERHEALTH map[string]bool = make(map[string]bool) // SERVERNAME: isAlive
 var DEFAULTPORT = ":8080"
 var LOGSPATH = "logs/logs.json"
+var COMMANDQUEUE = []api.Command{}
 
 func getToken(timestamp int64) {
 	var wg sync.WaitGroup
@@ -31,12 +32,36 @@ func getToken(timestamp int64) {
 			if err != nil {
 				return
 			}
-			http.Post(peer+DEFAULTPORT+"/api/token", "application/json", bytes.NewBuffer(buff))
+			resp, err := http.Post(peer+DEFAULTPORT+"/api/token", "application/json", bytes.NewBuffer(buff))
+			for err != nil || resp.Status != "200 OK" {
+				resp, err = http.Post(peer+DEFAULTPORT+"/api/token", "application/json", bytes.NewBuffer(buff))
+			}
 			defer wg.Done()
 		}()
 	}
 	wg.Wait()
 	HASTOKEN = true
+}
+
+func releaseToken(w http.ResponseWriter, r *http.Request) {
+	var bufferedBody []byte
+	var i, err = r.Body.Read(bufferedBody)
+	if err != nil || i <= 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(api.Message{Type: "ACK"})
+		return
+	}
+	var askingtimestamp int64
+	err = json.Unmarshal(bufferedBody, &askingtimestamp)
+	if err != nil || i <= 0 {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(api.Message{Type: "ACK"})
+		return
+	}
+	for HASTOKEN || len(COMMANDQUEUE) > 0 && COMMANDQUEUE[0].TimeStamp < askingtimestamp { // fica preso aqui até o outro servidor ter prioridade
+	}
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(api.Message{Type: "ACK"})
 }
 
 func removeDuplicates(array []api.Command) []api.Command {
@@ -124,6 +149,7 @@ func checkPeerHealth(peerAddr string) {
 func handleRequests() {
 	http.Handle("GET /api/checkhealth", http.HandlerFunc(getHealthCheck))
 	http.Handle("POST /api/sync", http.HandlerFunc(syncLogs))
+	http.Handle("POST /api/request", http.HandlerFunc(releaseToken))
 }
 
 func main() {
