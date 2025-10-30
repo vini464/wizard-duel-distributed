@@ -1,6 +1,7 @@
 package api
 
 type Command struct {
+	ID         string `json:"id"`
 	NodeID     string `json:"nodeId"`
 	TimeStamp  int64  `json:"timeStamp"`
 	Operation  string `json:"operation"`
@@ -13,8 +14,6 @@ type Message struct {
 	Type     string `json:"type"`              // Request, Reply, Propagate, Sync_Request,  Sync_Response
 	Commands []byte `json:"command,omitempty"` // só manda command em Propagate, Sync_Request, Sync_Response |commands é um []Command
 }
-
-
 
 // Existem 3 tipos de recursos:
 // Jogadores -> id Unico: Username
