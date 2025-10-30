@@ -11,19 +11,22 @@ import (
 	"sync"
 	"time"
 	"wizard-duel-distributed/api"
+	"wizard-duel-distributed/utils"
 )
 
-var HASTOKEN = false
+var ONCRITICALREGION bool = false
+var SERVERNAME string
+var NETIP string
 
 const SERVERPREFIX = 6                                   // quantidade de letras no prefixo do servername
-var SERVERNAME = os.Getenv("SERVERNAME")                 // env var SERVERNAME ex SERVER1 - basicamente o id do servidor
 var SERVERHEALTH map[string]bool = make(map[string]bool) // SERVERNAME: isAlive
 var DEFAULTPORT = ":8080"
 var LOGSPATH = "logs/logs.json"
-var COMMANDQUEUE = []api.Command{}
+var COMMANDQUEUE = make(utils.PriorityQueue, 0)
 var MAPMUTEX sync.Mutex
+var QUEUEMUTEX sync.Mutex
 
-func getToken(timestamp int64) {
+func Request(timestamp int64) {
 	var wg sync.WaitGroup
 
 	for peer, _ := range SERVERHEALTH {
@@ -33,18 +36,18 @@ func getToken(timestamp int64) {
 			if err != nil {
 				return
 			}
-			resp, err := http.Post(peer+DEFAULTPORT+"/api/token", "application/json", bytes.NewBuffer(buff))
+			resp, err := http.Post("http://"+peer+DEFAULTPORT+"/api/token", "application/json", bytes.NewBuffer(buff))
 			for err != nil || resp.Status != "200 OK" {
-				resp, err = http.Post(peer+DEFAULTPORT+"/api/token", "application/json", bytes.NewBuffer(buff))
+				resp, err = http.Post("http://"+peer+DEFAULTPORT+"/api/token", "application/json", bytes.NewBuffer(buff))
 			}
 			defer wg.Done()
 		}()
 	}
 	wg.Wait()
-	HASTOKEN = true
+	ONCRITICALREGION = true
 }
 
-func releaseToken(w http.ResponseWriter, r *http.Request) {
+func Reply(w http.ResponseWriter, r *http.Request) {
 	var bufferedBody []byte
 	var _, err = r.Body.Read(bufferedBody)
 	if err != nil {
@@ -61,7 +64,8 @@ func releaseToken(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(api.Message{Type: "ERR"})
 		return
 	}
-	for HASTOKEN || len(COMMANDQUEUE) > 0 && COMMANDQUEUE[0].TimeStamp < askingtimestamp { // fica preso aqui até o outro servidor ter prioridade
+	
+	for ONCRITICALREGION || COMMANDQUEUE.Front() != nil && COMMANDQUEUE.Front().TimeStamp < askingtimestamp { // fica preso aqui até o outro servidor ter prioridade
 	}
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(api.Message{Type: "ACK"})
@@ -101,10 +105,8 @@ func getHealthCheck(w http.ResponseWriter, r *http.Request) {
 }
 
 func syncLogs(w http.ResponseWriter, r *http.Request) {
-	var message api.Message
-	json.NewDecoder(r.Body).Decode(&message)
 	var bodyMessage []api.Command
-	err := json.Unmarshal(message.Commands, &bodyMessage)
+	err := json.NewDecoder(r.Body).Decode(&bodyMessage)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(w).Encode(api.Message{Type: "ERROR - body"})
@@ -115,7 +117,6 @@ func syncLogs(w http.ResponseWriter, r *http.Request) {
 		selfLogsBytes, _ = json.Marshal([]api.Command{}) // inicia um vetor vazio caso não consiga abrir o arquivo de logs
 	}
 	var logs []api.Command
-	fmt.Println("[debug] : logs ", string(selfLogsBytes))
 	err = json.Unmarshal(selfLogsBytes, &logs)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -125,19 +126,34 @@ func syncLogs(w http.ResponseWriter, r *http.Request) {
 	logs = append(logs, bodyMessage...)
 	logs = removeDuplicates(logs) // sem comandos repetidos
 	logs = getLatest(logs)        // diff completa
+	fmt.Println("[debug] : only one for resource")
 	// TODO: Executar commandos do log  -> vai entrar na danger zone
+	QUEUEMUTEX.Lock()
+	for _, command := range logs {
+		fmt.Println("[debug] : pushing command")
+		COMMANDQUEUE.Push(command)
+		fmt.Println("[debug] : pushed command")
+	}
+	QUEUEMUTEX.Unlock()
+	fmt.Println("[debug] : pushed commands")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(logs)
 }
 
 func checkPeerHealth(peerAddr string) {
 	for {
-		resp, err := http.Get(peerAddr + DEFAULTPORT + "/api/checkhealth")
-		
+		resp, err := http.Get("http://"+peerAddr + DEFAULTPORT + "/api/checkhealth")
+
 		MAPMUTEX.Lock()
 		if err != nil || resp.Status != "200 OK" {
 			SERVERHEALTH[peerAddr] = false
-			fmt.Println("[debug] - Unable to connect with peer: ", peerAddr)
+			if peerAddr == "172.16.201.7" {
+				fmt.Println("[debug] - Unable to connect with peer: ", peerAddr)
+				fmt.Println("[debug] - err ", err)
+				if err == nil {
+					fmt.Println("[debug] - resp ", resp.Status)
+				}
+			}
 		} else {
 			SERVERHEALTH[peerAddr] = true
 			respBody := []byte{}
@@ -145,24 +161,53 @@ func checkPeerHealth(peerAddr string) {
 			fmt.Println("[debug] - ", peerAddr, " - ", resp.Status, " - ", string(respBody))
 		}
 		MAPMUTEX.Unlock()
-		time.Sleep(5 * time.Second)
+		time.Sleep(1 * time.Second)
 	}
 }
 
 func handleRequests() {
 	http.Handle("GET /api/checkhealth", http.HandlerFunc(getHealthCheck))
 	http.Handle("POST /api/sync", http.HandlerFunc(syncLogs))
-	http.Handle("POST /api/request", http.HandlerFunc(releaseToken))
+	http.Handle("POST /api/request", http.HandlerFunc(Reply))
+	http.Handle("POST /api/update", http.HandlerFunc(update))
 	log.Fatal(http.ListenAndServe(SERVERNAME+DEFAULTPORT, nil))
 }
 
+func executeCommands() {
+	for {
+		if (len(COMMANDQUEUE) > 0) {
+			Request(COMMANDQUEUE.Front().TimeStamp)
+			fmt.Println("[debug] executing a command")
+			// propagando informação
+			ONCRITICALREGION = false
+		}
+	}
+}
+
+func update(w http.ResponseWriter, r *http.Request) {
+	
+}
+
+func propagate(command api.Command) {
+	MAPMUTEX.Lock()
+	for peer, alive := range SERVERHEALTH {
+		if alive {
+			com, _ := json.Marshal(command)
+			http.Post("http://" + peer + DEFAULTPORT + "api/update", "application/json", bytes.NewBuffer(com))
+		}
+	}
+}
+
 func main() {
-	SERVERNAME = "0.0.0.0"
+	SERVERNAME = utils.GetSelfAddres()
+	fmt.Println(SERVERNAME)
+	NETIP = utils.GetNetworkAddress()
 
 	// quando um server inicia, ele procura por todos os servidores de 0 a 10 e adiciona no SERVERHEALTH
 	fmt.Println("Server is starting")
-	for i := range 10 {
-		var peername = fmt.Sprintf("%s-%d", SERVERNAME[:SERVERPREFIX], i)
+	for i := range 255 {
+		var peername = fmt.Sprintf("%s.%d", NETIP, i)
+		fmt.Println(peername)
 		if peername != SERVERNAME {
 			go checkPeerHealth(peername)
 		}
@@ -171,11 +216,10 @@ func main() {
 		if alive {
 			var logs, err = os.ReadFile(LOGSPATH)
 			if err != nil {
-				logs, _ = json.Marshal("[]") // inicia um vetor vazio caso não consiga abrir o arquivo de logs
+				logs, _ = json.Marshal([]api.Command{}) // inicia um vetor vazio caso não consiga abrir o arquivo de logs
 			}
 			http.Post(peer+DEFAULTPORT+"/api/sync", "application/json", bytes.NewBuffer(logs))
 		}
 	}
 	handleRequests()
-
 }

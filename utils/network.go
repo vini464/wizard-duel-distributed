@@ -9,22 +9,10 @@ func GetSelfAddres() string{
 	}
 	defer conn.Close()
 	localAddress := conn.LocalAddr().(*net.UDPAddr)
-	return string(localAddress.IP)
+	return localAddress.IP.String()
 }
 
 func GetNetworkAddress() string{
-	localIp := GetNetworkAddress()
 	// procurando pelo terceiro ponto
-	p := 0
-	pointId := len(localIp)
-	for i, c := range localIp {
-		if p < 3 && c == '.' {
-			p++
-			pointId = i;
-		}
-		if p == 3 {
-			break
-		}
-	}
-	return localIp[:pointId+1] // retorna o endereço sem o id do pc
+	return Input("digite o ip da rede: ")
 }
