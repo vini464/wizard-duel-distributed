@@ -7,15 +7,37 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
+	"sync"
 	"time"
 	"wizard-duel-distributed/api"
 )
 
+var HASTOKEN = false
+
 const SERVERPREFIX = 6                                   // quantidade de letras no prefixo do servername
 var SERVERNAME = os.Getenv("SERVERNAME")                 // env var SERVERNAME ex SERVER1 - basicamente o id do servidor
 var SERVERHEALTH map[string]bool = make(map[string]bool) // SERVERNAME: isAlive
-var DEFAULTPORT = "8080"
+var DEFAULTPORT = ":8080"
 var LOGSPATH = "logs/logs.json"
+
+func getToken(timestamp int64) {
+	var wg sync.WaitGroup
+
+	for peer, _ := range SERVERHEALTH {
+		wg.Add(1)
+		go func() {
+			buff, err := json.Marshal(api.Message{Type: "Request", Commands: []byte(strconv.FormatInt(timestamp, 10))})
+			if err != nil {
+				return
+			}
+			http.Post(peer+DEFAULTPORT+"/api/token", "application/json", bytes.NewBuffer(buff))
+			defer wg.Done()
+		}()
+	}
+	wg.Wait()
+	HASTOKEN = true
+}
 
 func removeDuplicates(array []api.Command) []api.Command {
 	seen := make(map[string]bool)
@@ -32,7 +54,7 @@ func removeDuplicates(array []api.Command) []api.Command {
 func getLatest(logs []api.Command) []api.Command {
 	latests := make(map[string]api.Command) // resource: command
 	for _, command := range logs {
-		com, ok :=  latests[command.ResourceID]
+		com, ok := latests[command.ResourceID]
 		if !ok || com.TimeStamp < command.TimeStamp {
 			latests[command.ResourceID] = command
 		}
@@ -78,7 +100,7 @@ func syncLogs(w http.ResponseWriter, r *http.Request) {
 	}
 	logs = append(logs, bodyMessage...)
 	logs = removeDuplicates(logs) // sem comandos repetidos
-	logs = getLatest(logs) // diff completa
+	logs = getLatest(logs)        // diff completa
 	// TODO: Executar commandos do log  -> vai entrar na danger zone
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(logs)
@@ -101,6 +123,7 @@ func checkPeerHealth(peerAddr string) {
 
 func handleRequests() {
 	http.Handle("GET /api/checkhealth", http.HandlerFunc(getHealthCheck))
+	http.Handle("POST /api/sync", http.HandlerFunc(syncLogs))
 }
 
 func main() {
@@ -119,8 +142,7 @@ func main() {
 			if err != nil {
 				logs, _ = json.Marshal("[]") // inicia um vetor vazio caso não consiga abrir o arquivo de logs
 			}
-			http.Post(peer+":"+DEFAULTPORT+"/api/syncrequest", "application/json", bytes.NewBuffer(logs))
-
+			http.Post(peer+DEFAULTPORT+"/api/sync", "application/json", bytes.NewBuffer(logs))
 		}
 	}
 
