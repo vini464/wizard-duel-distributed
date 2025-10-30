@@ -72,13 +72,15 @@ func Reply(w http.ResponseWriter, r *http.Request) {
 }
 
 func removeDuplicates(array []api.Command) []api.Command {
-	seen := make(map[string]bool)
+	seen := make(map[string]api.Command)
 	unique := []api.Command{}
 	for _, e := range array {
-		if !seen[e.ID] {
-			seen[e.ID] = true
-			unique = append(unique, e)
+		if c, ok := seen[e.ID]; !ok || c.TimeStamp <= e.TimeStamp{
+			seen[e.ID] = e
 		}
+	}
+	for _, c := range seen {
+			unique = append(unique, c)
 	}
 	return unique
 }
