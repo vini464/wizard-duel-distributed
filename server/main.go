@@ -4,17 +4,14 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
-	"strconv"
 	"sync"
 	"time"
 	"wizard-duel-distributed/api"
 	"wizard-duel-distributed/utils"
 )
 
-var ONCRITICALREGION bool = false
 var SERVERNAME string
 var NETIP string
 
@@ -26,125 +23,9 @@ var COMMANDQUEUE = make(utils.PriorityQueue, 0)
 var MAPMUTEX sync.Mutex
 var QUEUEMUTEX sync.Mutex
 
-func Request(timestamp int64) {
-	var wg sync.WaitGroup
-
-	for peer, _ := range SERVERHEALTH {
-		wg.Add(1)
-		go func() {
-			buff, err := json.Marshal(api.Message{Type: "Request", Commands: []byte(strconv.FormatInt(timestamp, 10))})
-			if err != nil {
-				return
-			}
-			resp, err := http.Post("http://"+peer+DEFAULTPORT+"/api/token", "application/json", bytes.NewBuffer(buff))
-			for err != nil || resp.Status != "200 OK" {
-				resp, err = http.Post("http://"+peer+DEFAULTPORT+"/api/token", "application/json", bytes.NewBuffer(buff))
-			}
-			defer wg.Done()
-		}()
-	}
-	wg.Wait()
-	ONCRITICALREGION = true
-}
-
-func Reply(w http.ResponseWriter, r *http.Request) {
-	var bufferedBody []byte
-	var _, err = r.Body.Read(bufferedBody)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(api.Message{Type: "ERR"})
-		return
-	}
-	var message api.Message
-	var askingtimestamp int64
-	err = json.NewDecoder(r.Body).Decode(&message)
-	askingtimestamp, err = strconv.ParseInt(string(message.Commands), 10, 64)
-	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		json.NewEncoder(w).Encode(api.Message{Type: "ERR"})
-		return
-	}
-
-	for ONCRITICALREGION || COMMANDQUEUE.Front() != nil && COMMANDQUEUE.Front().TimeStamp < askingtimestamp { // fica preso aqui até o outro servidor ter prioridade
-	}
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(api.Message{Type: "ACK"})
-}
-
-func removeDuplicates(array []api.Command) []api.Command {
-	seen := make(map[string]api.Command)
-	unique := []api.Command{}
-	for _, e := range array {
-		if c, ok := seen[e.ID]; !ok || c.TimeStamp <= e.TimeStamp {
-			seen[e.ID] = e
-		}
-	}
-	for _, c := range seen {
-		unique = append(unique, c)
-	}
-	return unique
-}
-
-func getLatest(logs []api.Command) []api.Command {
-	latests := make(map[string]api.Command) // resource: command
-	for _, command := range logs {
-		com, ok := latests[command.ResourceID]
-		if !ok || com.TimeStamp < command.TimeStamp {
-			latests[command.ResourceID] = command
-		}
-	}
-	uniqueLogs := []api.Command{}
-	for _, command := range logs {
-		uniqueLogs = append(uniqueLogs, command)
-	}
-	return uniqueLogs
-}
-
-func getHealthCheck(w http.ResponseWriter, r *http.Request) {
-	message := api.Message{Type: "ACK"} // indica que recebeu a mensagem e que ta vivo
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(message)
-}
-
-func syncLogs(w http.ResponseWriter, r *http.Request) {
-	var bodyMessage []api.Command
-	err := json.NewDecoder(r.Body).Decode(&bodyMessage)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(api.Message{Type: "ERROR - body"})
-		return
-	}
-	selfLogsBytes, err := os.ReadFile(LOGSPATH)
-	if err != nil {
-		selfLogsBytes, _ = json.Marshal([]api.Command{}) // inicia um vetor vazio caso não consiga abrir o arquivo de logs
-	}
-	var logs []api.Command
-	err = json.Unmarshal(selfLogsBytes, &logs)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(w).Encode(api.Message{Type: "SyncResponse"})
-		return
-	}
-	logs = append(logs, bodyMessage...)
-	logs = removeDuplicates(logs) // sem comandos repetidos
-	logs = getLatest(logs)        // diff completa
-	fmt.Println("[debug] : only one for resource")
-	// TODO: Executar commandos do log  -> vai entrar na danger zone
-	QUEUEMUTEX.Lock()
-	for _, command := range logs {
-		fmt.Println("[debug] : pushing command")
-		COMMANDQUEUE.Push(command)
-		fmt.Println("[debug] : pushed command")
-	}
-	QUEUEMUTEX.Unlock()
-	fmt.Println("[debug] : pushed commands")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(logs)
-}
-
 func checkPeerHealth(peerAddr string) {
 	for {
-		resp, err := http.Get("http://" + peerAddr + DEFAULTPORT + "/api/checkhealth")
+		resp, err := http.Get(peerAddr + "/api/checkhealth")
 
 		MAPMUTEX.Lock()
 		if err != nil || resp.Status != "200 OK" {
@@ -167,14 +48,6 @@ func checkPeerHealth(peerAddr string) {
 	}
 }
 
-func handleRequests() {
-	http.Handle("GET /api/checkhealth", http.HandlerFunc(getHealthCheck))
-	http.Handle("POST /api/sync", http.HandlerFunc(syncLogs))
-	http.Handle("POST /api/request", http.HandlerFunc(Reply))
-	http.Handle("POST /api/update", http.HandlerFunc(update))
-	log.Fatal(http.ListenAndServe(SERVERNAME+DEFAULTPORT, nil))
-}
-
 func executeCommands() {
 	for {
 		if len(COMMANDQUEUE) > 0 {
@@ -188,22 +61,17 @@ func executeCommands() {
 	}
 }
 
-func update(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Executando codigo")
-	w.WriteHeader(http.StatusOK)
-}
-
 func propagate(command api.Command) {
 	MAPMUTEX.Lock()
 	for peer, alive := range SERVERHEALTH {
 		if alive {
 			com, _ := json.Marshal(command)
-			http.Post("http://"+peer+DEFAULTPORT+"api/update", "application/json", bytes.NewBuffer(com))
+			http.Post(peer+"api/update", "application/json", bytes.NewBuffer(com))
 		}
 	}
 }
 
-func main() {
+func Instantiate() {
 	SERVERNAME = utils.GetSelfAddres()
 	fmt.Println(SERVERNAME)
 	NETIP = utils.GetNetworkAddress()
@@ -214,7 +82,7 @@ func main() {
 		var peername = fmt.Sprintf("%s.%d", NETIP, i)
 		fmt.Println(peername)
 		if peername != SERVERNAME {
-			go checkPeerHealth(peername)
+			go checkPeerHealth("http://" + peername + DEFAULTPORT)
 		}
 	}
 	for peer, alive := range SERVERHEALTH {
