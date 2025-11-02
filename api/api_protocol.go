@@ -16,6 +16,7 @@ type Message struct {
 }
 
 // Existem 3 tipos de recursos:
-// Jogadores -> id Unico: Username
-// Partidas  -> id Unico: Username1_Username2_Timestamp
-// Cartas    -> id Unico: Cardname
+// Jogadores -> id Unico: Player#ID
+// Partidas  -> id Unico: Match#ID
+// Cartas    -> id Unico:	Card#ID
+// Trocas    -> id Unico:	Trade#ID
