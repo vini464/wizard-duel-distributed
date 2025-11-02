@@ -1,4 +1,4 @@
-package utils
+package models
 
 type Player struct {
 	Id       int    `json:"id"`
