@@ -10,9 +10,10 @@ type Player struct {
 
 type Card struct {
 	Id       int    `json:"id"`
-	Cardname string `json:"cardname"`
 	Manacost int    `json:"manacost"`
 	Power    int    `json:"power"`
+	Cardname string `json:"cardname"`
+	Rarity   string `json:"rarity"`
 }
 
 type Trade struct {

@@ -1,0 +1,49 @@
+package models
+
+import (
+	"encoding/json"
+	"os"
+)
+
+func CreateCard(manacost, power int, cardname, rarity string, cards []Card) []Card {
+	id := 0
+	for _, c := range cards {
+		if c.Id >= id {
+			id = c.Id + 1
+		}
+	}
+	card := Card{
+		Id:       id,
+		Manacost: manacost,
+		Power:    power,
+		Cardname: cardname,
+		Rarity:   rarity,
+	}
+	cards = append(cards, card)
+
+	return cards
+}
+
+func RetrieveCards(filepath string) []Card {
+	bytes, err := os.ReadFile(filepath)
+	if err != nil {
+		return []Card{}
+	}
+	var cards []Card
+	err = json.Unmarshal(bytes, &cards)
+	if err != nil {
+		return []Card{}
+	}
+	return cards
+}
+
+func RetrieveCard(id int, cards []Card) *Card {
+	for _, card := range cards {
+		if card.Id == id {
+			return &card
+		}
+	}
+	return nil
+}
+
+// não preciso de update e delete para cartas
