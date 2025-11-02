@@ -30,6 +30,7 @@ type Match struct {
 	Id      int              `json:"id"`
 	Players map[int]GameInfo `json:"players"`
 	Over    bool             `json:"over"`
+	Turn    int              `json:"turn"` // Indica qual jogador tem a vez
 }
 
 type GameInfo struct {
