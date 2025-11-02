@@ -29,12 +29,12 @@ type Trade struct {
 type Match struct {
 	Id      int              `json:"id"`
 	Players map[int]GameInfo `json:"players"`
+	Over    bool             `json:"over"`
 }
 
 type GameInfo struct {
-	Player int    `json:"player"`
-	Life   int    `json:"life"`
-	Mana   int    `json:"mana"`
-	Deck   [8]int `json:"deck"`
-	Hand   [4]int `json:"hand"`
+	Life int    `json:"life"`
+	Mana int    `json:"mana"`
+	Deck [8]int `json:"deck"`
+	Hand [4]int `json:"hand,omitempty"`
 }
