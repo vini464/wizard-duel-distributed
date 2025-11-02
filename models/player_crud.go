@@ -48,20 +48,20 @@ func RetrievePlayer(id int, password string, players []Player) *Player {
 	return nil
 }
 
-func UpdatePlayer(id int, password string, newdata Player, players []Player) []Player {
-	index := 0
+func UpdatePlayer(password string, newdata Player, players []Player) []Player {
+	index := -1
 	for i, p := range players {
-		if p.Id == id {
+		if p.Id == newdata.Id {
 			if password == p.Password {
 				index = i
 				break
-			} else {
-				return players
 			}
 		}
 	}
-	players = append(players[:index], players[index+1:]...)
-	players = append(players, newdata)
+	if index >= 0 {
+		players = append(players[:index], players[index+1:]...)
+		players = append(players, newdata)
+	}
 	return players
 }
 
