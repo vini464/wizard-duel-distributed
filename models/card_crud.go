@@ -46,4 +46,18 @@ func RetrieveCard(id int, cards []Card) *Card {
 	return nil
 }
 
+func SaveCards(filepath string, cards[]Card) bool {
+	file, err := os.Create(filepath)
+	if err != nil {
+		return false
+	}
+	defer file.Close()
+	bytes, err := json.Marshal(cards)
+	if err != nil {
+		bytes, _ = json.Marshal([]Card{})
+	}
+	_, err = file.Write(bytes)
+	return err == nil
+}
+
 // não preciso de update e delete para cartas

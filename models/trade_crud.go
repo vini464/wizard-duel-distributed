@@ -59,5 +59,17 @@ func UpdateTrade(newdata Trade, trades []Trade) []Trade {
 	return  trades
 }
 
-
+func SaveTrades(filepath string, trades[]Trade) bool {
+	file, err := os.Create(filepath)
+	if err != nil {
+		return false
+	}
+	defer file.Close()
+	bytes, err := json.Marshal(trades)
+	if err != nil {
+		bytes, _ = json.Marshal([]Trade{})
+	}
+	_, err = file.Write(bytes)
+	return err == nil
+}
 // não preciso de um delete trade, é bom manter o histórico de trocas

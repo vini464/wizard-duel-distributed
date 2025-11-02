@@ -80,3 +80,18 @@ func DeletePlayer(id int, password string, players []Player) []Player {
 	}
 	return players
 }
+
+
+func SavePlayers(filepath string, players[]Player) bool {
+	file, err := os.Create(filepath)
+	if err != nil {
+		return false
+	}
+	defer file.Close()
+	bytes, err := json.Marshal(players)
+	if err != nil {
+		bytes, _ = json.Marshal([]Player{})
+	}
+	_, err = file.Write(bytes)
+	return err == nil
+}

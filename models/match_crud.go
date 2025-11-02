@@ -77,5 +77,18 @@ func UpdateMatch(newdata Match, matches []Match) []Match {
 	return matches
 }
 
+func SaveMatches(filepath string, matches[]Match) bool {
+	file, err := os.Create(filepath)
+	if err != nil {
+		return false
+	}
+	defer file.Close()
+	bytes, err := json.Marshal(matches)
+	if err != nil {
+		bytes, _ = json.Marshal([]Match{})
+	}
+	_, err = file.Write(bytes)
+	return err == nil
+}
 
 // Não preciso de um DeleteMatch é importante manter o historico de partidas
