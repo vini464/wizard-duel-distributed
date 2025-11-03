@@ -1,6 +1,10 @@
 package main
 
-import "wizard-duel-distributed/api"
+import (
+	"encoding/json"
+	"os"
+	"wizard-duel-distributed/api"
+)
 
 func removeDuplicates(array []api.Command) []api.Command {
 	seen := make(map[string]api.Command)
@@ -29,4 +33,22 @@ func getLatest(logs []api.Command) []api.Command {
 		uniqueLogs = append(uniqueLogs, command)
 	}
 	return uniqueLogs
+}
+
+func UpdateLogs(filepath string, command api.Command) {
+	bytes, err := os.ReadFile(filepath)
+	if err == nil {
+		var logs []api.Command
+		err = json.Unmarshal(bytes, &logs)
+		if err == nil {
+			logs = append(logs, command)
+			bytes, _ = json.Marshal(logs)
+			file, err := os.Create(filepath)
+			if err == nil {
+				file.Write(bytes)
+				file.Close()
+				return
+			}
+		}
+	}
 }
