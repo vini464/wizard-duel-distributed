@@ -17,7 +17,7 @@ func removeDuplicates(array []api.Command) []api.Command {
 }
 
 func getLatest(logs []api.Command) []api.Command {
-	latests := make(map[string]api.Command) // resource: command
+	latests := make(map[int]api.Command) // resource: command
 	for _, command := range logs {
 		com, ok := latests[command.ResourceID]
 		if !ok || com.TimeStamp < command.TimeStamp {

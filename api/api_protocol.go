@@ -1,12 +1,12 @@
 package api
 
 type Command struct {
-	ID         string `json:"id"`
-	NodeID     string `json:"nodeId"`
+	ID         string `json:"id"`         // ResourceId + TimeStamp
+	ResourceID int    `json:"resourceId"` // Cada recurso tem um ID único
+	NodeID     string `json:"nodeId"`     // Ip do servidor que veio o comando
 	TimeStamp  int64  `json:"timeStamp"`
-	Operation  string `json:"operation"`
+	Operation  string `json:"operation"` // Create | Delete | Update
 	Resource   string `json:"resource"`        // Tipo do resource que esta sendo alterado
-	ResourceID string `json:"resourceId"`      // Cada recurso tem um ID único
 	Value      []byte `json:"value,omitempty"` // cara resource tem um tipo diferente de dado
 }
 

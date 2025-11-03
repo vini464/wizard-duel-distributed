@@ -18,7 +18,11 @@ var NETIP string
 const SERVERPREFIX = 6                                   // quantidade de letras no prefixo do servername
 var SERVERHEALTH map[string]bool = make(map[string]bool) // SERVERNAME: isAlive
 var DEFAULTPORT = ":8080"
-var LOGSPATH = "logs/logs.json"
+var LOGSPATH    = "logs/logs.json"
+var PLAYERSPATH = "database/players.json"
+var MATCHESPATH = "database/matches.json"
+var CARDSPATH   = "database/cards.json"
+var TRADESPATH  = "database/trades.json"
 var COMMANDQUEUE = make(utils.PriorityQueue, 0)
 var MAPMUTEX sync.Mutex
 var QUEUEMUTEX sync.Mutex
@@ -71,7 +75,9 @@ func propagate(command api.Command) {
 	}
 }
 
-func Instantiate() {
+
+
+func main() {
 	SERVERNAME = utils.GetSelfAddres()
 	fmt.Println(SERVERNAME)
 	NETIP = utils.GetNetworkAddress()
@@ -97,3 +103,5 @@ func Instantiate() {
 	go executeCommands()
 	handleRequests()
 }
+
+
