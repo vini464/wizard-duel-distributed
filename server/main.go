@@ -201,6 +201,7 @@ func executeCommands() {
 }
 
 func propagate(command api.Command) {
+	UpdateLogs(LOGSPATH, command)
 	MAPMUTEX.Lock()
 	for peer, alive := range SERVERHEALTH {
 		if alive {

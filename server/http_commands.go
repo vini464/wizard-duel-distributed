@@ -62,6 +62,7 @@ func update(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(api.Message{Type: "ERROR"})
 		return
 	}
+	UpdateLogs(LOGSPATH, command)
 	switch command.Resource {
 	case "player":
 		players := models.RetrievePlayers(PLAYERSPATH)
