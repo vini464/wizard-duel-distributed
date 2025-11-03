@@ -65,7 +65,7 @@ func (b *Broker) Unsubscribe(topic string, conn net.Conn) {
 
 	for id, c := range b.Subscribers[topic] {
 		if c == conn {
-			b.Subscribers[topic] = append(b.Subscribers[topic][:id], b.Subscribers[topic][id+1:]...) 
+			b.Subscribers[topic] = append(b.Subscribers[topic][:id], b.Subscribers[topic][id+1:]...)
 			return
 		}
 	}
@@ -81,7 +81,7 @@ func (b *Broker) Publish(topic string, msg_body []byte) {
 	}
 
 	msg := communication.Message{
-		Cmd:  communication.MESSAGE,
+		Cmd: topic,
 		Msg: msg_body,
 	}
 
@@ -91,4 +91,3 @@ func (b *Broker) Publish(topic string, msg_body []byte) {
 		communication.SendMessage(conn, msg)
 	}
 }
-
