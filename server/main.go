@@ -108,6 +108,31 @@ func topicHandler(broker net.Conn) {
 		now := time.Now().UnixMilli()
 		log.Fatal(err)
 		switch message.Cmd {
+		case "getCards":
+			DATAMUTEX.Lock()
+			var cred communication.Credentials
+			err := communication.UnmarshalMessage(message.Msg, &cred)
+			if err == nil {
+				cards := []models.Card{}
+				players := models.RetrievePlayers(PLAYERSPATH)
+				allCards := models.RetrieveCards(CARDSPATH)
+				player := models.RetrievePlayerByName(cred.Username, cred.Password, players)
+				for _, c := range player.Cards {
+					card := models.RetrieveCard(c, allCards)
+					if card != nil {
+						cards = append(cards, *card)
+					}
+				}
+				bytes, _ := json.Marshal(cards)
+				msg := communication.Message{
+					Cmd: communication.PUBLISH,
+					Tpc: cred.Username,
+					Msg: bytes,
+				}
+				communication.SendMessage(broker, msg)
+
+			}
+			DATAMUTEX.Unlock()
 		case "login":
 			DATAMUTEX.Lock()
 			var cred communication.Credentials
@@ -151,8 +176,9 @@ func topicHandler(broker net.Conn) {
 					ID:        cred.Username + fmt.Sprint(now),
 					NodeID:    SERVERNAME,
 					TimeStamp: now,
-					Value:     message.Msg,
+					Operation: message.Cmd,
 					Resource:  "player",
+					Value:     message.Msg,
 				}
 				if message.Cmd == "enqueue" {
 					command.Resource = "queue"
