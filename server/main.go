@@ -65,7 +65,136 @@ func executeCommands() {
 			fmt.Println("[debug] executing a command")
 			c := COMMANDQUEUE.Pop()
 			// propagando informação
-			propagate(*c)
+			switch c.Operation {
+			case "signup":
+				var cred communication.Credentials
+				err := json.Unmarshal(c.Value, &cred)
+				if err == nil {
+					bytes := Signup(cred)
+					if bytes != nil {
+						c.Value = *bytes
+						c.Operation = "create"
+					}
+					propagate(*c)
+				}
+			case "buy":
+				var cred communication.Credentials
+				err := json.Unmarshal(c.Value, &cred)
+				if err == nil {
+					bytes := Buy(cred)
+					if bytes != nil {
+						c.Value = *bytes
+						c.Operation = "update"
+					}
+					propagate(*c)
+				}
+			case "enqueue":
+				var cred communication.Credentials
+				err := json.Unmarshal(c.Value, &cred)
+				if err == nil {
+					paired, bytes := Enqueue(cred)
+					if bytes != nil {
+						c.Value = *bytes
+						if paired {
+							var match models.Match
+							json.Unmarshal(*bytes, &match)
+							c.Operation = "create"
+							c.Resource = "match"
+							c.ResourceID = fmt.Sprint(match.Id)
+							c.ID = fmt.Sprintf("%d%d", match.Id, c.TimeStamp)
+							propagate(*c)
+							queue := []int{}
+							*bytes, _ = json.Marshal(queue)
+							c.Value = *bytes
+						} else {
+							c.Operation = "update"
+						}
+						propagate(*c)
+					}
+				}
+			case "playCard":
+				var msg communication.MatchMessage
+				err := json.Unmarshal(c.Value, &msg)
+				if err == nil {
+					bytes := PlayCard(msg)
+					if bytes != nil {
+						c.Operation = "update"
+						c.Value = *bytes
+						propagate(*c)
+					}
+				}
+			case "surrender":
+				var msg communication.MatchMessage
+				err := json.Unmarshal(c.Value, &msg)
+				if err == nil {
+					bytes := Surrender(msg)
+					if bytes != nil {
+						c.Operation = "update"
+						c.Value = *bytes
+						propagate(*c)
+					}
+				}
+			case "createTrade":
+				var tradeMsg communication.TradeMessage
+				err := json.Unmarshal(c.Value, &tradeMsg)
+				if err == nil {
+					bytes := CreateTrade(tradeMsg)
+					if bytes != nil {
+						var trade models.Trade
+						json.Unmarshal(*bytes, &trade)
+						c.ID = fmt.Sprintf("%d%d", trade.Id, c.TimeStamp)
+						c.ResourceID = fmt.Sprint(tradeMsg.TradeID)
+						c.Operation = "create"
+						c.Value = *bytes
+					}
+					propagate(*c)
+				}
+			// adicionar o commandID e o resource ID
+
+			case "acceptTrade":
+				var tradeMsg communication.TradeMessage
+				err := json.Unmarshal(c.Value, &tradeMsg)
+				if err == nil {
+					bytes := AcceptTrade(tradeMsg)
+					if bytes != nil {
+						var trade models.Trade
+						json.Unmarshal(*bytes, &trade)
+						c.Operation = "update"
+						c.Value = *bytes
+						propagate(*c)
+						c.Resource = "Players"
+						c.ResourceID = "players"
+						c.ID = fmt.Sprintf("%s%d", c.ResourceID, c.TimeStamp)
+						players := models.RetrievePlayers(PLAYERSPATH)
+						*bytes, _ = json.Marshal(players)
+						c.Value = *bytes
+						propagate(*c)
+					}
+				}
+			case "denyTrade":
+				var tradeMsg communication.TradeMessage
+				err := json.Unmarshal(c.Value, &tradeMsg)
+				if err == nil {
+					bytes := DenyTrade(tradeMsg)
+					if bytes != nil {
+						c.Operation = "update"
+						c.Value = *bytes
+					}
+				}
+
+			case "suggestTrade":
+				var tradeMsg communication.TradeMessage
+				err := json.Unmarshal(c.Value, &tradeMsg)
+				if err == nil {
+					bytes := SuggestTrade(tradeMsg)
+					if bytes != nil {
+						c.Operation = "update"
+						c.Value = *bytes
+					}
+				}
+			default:
+				fmt.Println("Uknown Command")
+			}
 			ONCRITICALREGION = false
 		}
 	}
@@ -83,7 +212,7 @@ func propagate(command api.Command) {
 }
 
 func subscribeChannels(broker net.Conn) bool {
-	topics := []string{"login", "signin", "buy",
+	topics := []string{"login", "signup", "buy",
 		"createTrade", "acceptTrade", "tradableCards", "denyTrade",
 		"sujestTrade", "enqueue", "playCard", "getMatchData", "surrender", "getCards"}
 
@@ -116,7 +245,7 @@ func topicHandler(broker net.Conn) {
 				cards := []models.Card{}
 				players := models.RetrievePlayers(PLAYERSPATH)
 				allCards := models.RetrieveCards(CARDSPATH)
-				player := models.RetrievePlayerByName(cred.Username, cred.Password, players)
+				player := models.RetrievePlayerByName(cred.Username, players)
 				for _, c := range player.Cards {
 					card := models.RetrieveCard(c, allCards)
 					if card != nil {
@@ -139,7 +268,7 @@ func topicHandler(broker net.Conn) {
 			err := communication.UnmarshalMessage(message.Msg, &cred)
 			if err == nil {
 				players := models.RetrievePlayers(PLAYERSPATH)
-				player := models.RetrievePlayerByName(cred.Username, cred.Password, players)
+				player := models.RetrievePlayerByName(cred.Username, players)
 				ok := player != nil
 				bytes, _ := json.Marshal(ok)
 				msg := communication.Message{
@@ -176,29 +305,30 @@ func topicHandler(broker net.Conn) {
 				matches := models.RetrieveMatches(MATCHESPATH)
 				match := models.RetrieveMatch(msg.MatchID, matches)
 				if match != nil {
-				bytes, _ := json.Marshal(*match)
-				msg := communication.Message{
-					Cmd: communication.PUBLISH,
-					Tpc: msg.Credentials.Username,
-					Msg: bytes,
-				}
-				communication.SendMessage(broker, msg)
+					bytes, _ := json.Marshal(*match)
+					msg := communication.Message{
+						Cmd: communication.PUBLISH,
+						Tpc: msg.Credentials.Username,
+						Msg: bytes,
+					}
+					communication.SendMessage(broker, msg)
 				}
 			}
 			DATAMUTEX.Unlock()
 
-		case "signin", "buy", "enqueue":
+		case "signup", "buy", "enqueue":
 			QUEUEMUTEX.Lock()
 			var cred communication.Credentials
 			err := communication.UnmarshalMessage(message.Msg, &cred)
 			if err == nil {
 				command := api.Command{
-					ID:        cred.Username + fmt.Sprint(now),
-					NodeID:    SERVERNAME,
-					TimeStamp: now,
-					Operation: message.Cmd,
-					Resource:  "player",
-					Value:     message.Msg,
+					ID:         cred.Username + fmt.Sprint(now),
+					ResourceID: cred.Username,
+					NodeID:     SERVERNAME,
+					TimeStamp:  now,
+					Operation:  message.Cmd,
+					Resource:   "player",
+					Value:      message.Msg,
 				}
 				if message.Cmd == "enqueue" {
 					command.Resource = "queue"
@@ -206,7 +336,7 @@ func topicHandler(broker net.Conn) {
 				COMMANDQUEUE.Push(command)
 			}
 			QUEUEMUTEX.Unlock()
-		case "createTrade", "acceptTrade", "denyTrade", "sujestTrade":
+		case "createTrade", "acceptTrade", "denyTrade", "suggestTrade":
 			QUEUEMUTEX.Lock()
 			var trademMessage communication.TradeMessage
 			err := communication.UnmarshalMessage(message.Msg, &trademMessage)
@@ -219,7 +349,8 @@ func topicHandler(broker net.Conn) {
 					Resource:  "trade",
 				}
 				if message.Cmd != "createTrade" {
-					command.ResourceID = trademMessage.TradeID
+					command.ResourceID = fmt.Sprint(trademMessage.TradeID)
+					command.ID = fmt.Sprintf("%d%d", trademMessage.TradeID, now)
 				}
 
 				COMMANDQUEUE.Push(command)
@@ -233,10 +364,10 @@ func topicHandler(broker net.Conn) {
 			if err == nil {
 				command := api.Command{
 					ID:         fmt.Sprintf("%d%d", matchMessage.MatchID, now),
-					ResourceID: matchMessage.MatchID,
+					ResourceID: fmt.Sprint(matchMessage.MatchID),
 					TimeStamp:  now,
 					NodeID:     SERVERNAME,
-					Operation: message.Cmd,
+					Operation:  message.Cmd,
 					Value:      message.Msg,
 					Resource:   "match",
 				}

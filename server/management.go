@@ -9,7 +9,7 @@ import (
 	"wizard-duel-distributed/models"
 )
 
-func Signin(credentials communication.Credentials) *[]byte {
+func Signup(credentials communication.Credentials) *[]byte {
 	players := models.RetrievePlayers(PLAYERSPATH)
 	player := models.CreatePlayer(credentials.Username, credentials.Username, &players)
 	if player == nil {
@@ -25,43 +25,30 @@ func Signin(credentials communication.Credentials) *[]byte {
 
 func Buy(credentials communication.Credentials) *[]byte {
 	players := models.RetrievePlayers(PLAYERSPATH)
-	player := models.RetrievePlayerByName(credentials.Username, credentials.Password, players)
+	player := models.RetrievePlayerByName(credentials.Username, players)
 	if player == nil {
 		return nil
 	}
 	booster := []models.Card{}
 	cards := models.RetrieveCards(CARDSPATH)
-	total := 0
 
-	for _, card := range cards {
-		total += card.Quantity
-	}
 	// é como se as cartas estivessem em sequencia
 	for range 5 { // escolhendo 5 cards
-		rnd := rand.Intn(total)
+		rnd := rand.Intn(75)
 		for _, card := range cards {
-			if rnd < card.Quantity {
+			minqnt := 0
+			switch card.Rarity {
+			case "common":
+				minqnt = 40
+			case "uncommon":
+				minqnt = 20
+			case "rare":
+				minqnt = 10
+			case "legend":
+				minqnt = 5
+			}
+			if rnd < minqnt {
 				booster = append(booster, card)
-
-				card.Quantity--
-				total--
-				minqnt := 0
-				switch card.Rarity {
-				case "common":
-					minqnt = 40
-				case "uncommon":
-					minqnt = 20
-				case "rare":
-					minqnt = 10
-				case "legend":
-					minqnt = 5
-				}
-
-				if card.Quantity < minqnt { // previne que o estoque fique vazio
-					total += minqnt - card.Quantity
-					card.Quantity = minqnt
-				}
-				break
 			} else {
 				rnd -= card.Quantity
 			}
@@ -77,7 +64,7 @@ func Buy(credentials communication.Credentials) *[]byte {
 
 func CreateTrade(msg communication.TradeMessage) *[]byte {
 	players := models.RetrievePlayers(PLAYERSPATH)
-	player := models.RetrievePlayerByName(msg.Credentials.Username, msg.Credentials.Password, players)
+	player := models.RetrievePlayerByName(msg.Credentials.Username, players)
 
 	if player == nil {
 		return nil
@@ -92,7 +79,7 @@ func CreateTrade(msg communication.TradeMessage) *[]byte {
 
 func AcceptTrade(msg communication.TradeMessage) *[]byte {
 	players := models.RetrievePlayers(PLAYERSPATH)
-	player := models.RetrievePlayerByName(msg.Credentials.Username, msg.Credentials.Password, players)
+	player := models.RetrievePlayerByName(msg.Credentials.Username, players)
 
 	if player == nil {
 		return nil
@@ -102,15 +89,35 @@ func AcceptTrade(msg communication.TradeMessage) *[]byte {
 	if trade == nil {
 		return nil
 	}
+	id := -1
+	for _, c := range player.Cards {
+		if c == trade.CardA {
+			id = c
+			break
+		}
+	}
+	if id >= 0 {
+		player.Cards = append(player.Cards[:id], player.Cards[id+1:]...)
+		player.Cards = append(player.Cards, trade.CardB)
+	}
+
+	id = 0
+	p2 := models.RetrievePlayerByName(trade.PlayerB, players)
+	if id >= 0 {
+		p2.Cards = append(p2.Cards[:id], p2.Cards[id+1:]...)
+		p2.Cards = append(p2.Cards, trade.CardA)
+	}
+
 	trade.Accepted = true
 	models.SaveTrades(TRADESPATH, trades)
+	models.SavePlayers(PLAYERSPATH, players)
 	bytes, _ := json.Marshal(*trade)
 	return &bytes
 }
 
 func DenyTrade(msg communication.TradeMessage) *[]byte {
 	players := models.RetrievePlayers(PLAYERSPATH)
-	player := models.RetrievePlayerByName(msg.Credentials.Username, msg.Credentials.Password, players)
+	player := models.RetrievePlayerByName(msg.Credentials.Username, players)
 
 	if player == nil {
 		return nil
@@ -133,7 +140,7 @@ func DenyTrade(msg communication.TradeMessage) *[]byte {
 
 func SuggestTrade(msg communication.TradeMessage) *[]byte {
 	players := models.RetrievePlayers(PLAYERSPATH)
-	player := models.RetrievePlayerByName(msg.Credentials.Username, msg.Credentials.Password, players)
+	player := models.RetrievePlayerByName(msg.Credentials.Username, players)
 
 	if player == nil {
 		return nil
@@ -153,7 +160,7 @@ func SuggestTrade(msg communication.TradeMessage) *[]byte {
 
 func PlayCard(msg communication.MatchMessage) *[]byte {
 	players := models.RetrievePlayers(PLAYERSPATH)
-	player := models.RetrievePlayerByName(msg.Credentials.Username, msg.Credentials.Password, players)
+	player := models.RetrievePlayerByName(msg.Credentials.Username, players)
 	cards := models.RetrieveCards(CARDSPATH)
 	card := models.RetrieveCard(msg.CardID, cards)
 	matches := models.RetrieveMatches(MATCHESPATH)
@@ -186,7 +193,7 @@ func PlayCard(msg communication.MatchMessage) *[]byte {
 
 func Surrender(msg communication.MatchMessage) *[]byte {
 	players := models.RetrievePlayers(PLAYERSPATH)
-	player := models.RetrievePlayerByName(msg.Credentials.Username, msg.Credentials.Password, players)
+	player := models.RetrievePlayerByName(msg.Credentials.Username, players)
 	matches := models.RetrieveMatches(MATCHESPATH)
 	match := models.RetrieveMatch(msg.MatchID, matches)
 

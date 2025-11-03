@@ -8,7 +8,7 @@ import (
 func CreatePlayer(username, password string, players *[]Player) *Player {
 	for _, p := range *players { // procura por algum username já registrado
 		if p.Username == username {
-			return nil 
+			return nil
 		}
 	}
 	player := Player{
@@ -34,13 +34,10 @@ func RetrievePlayers(filepath string) []Player {
 	return data
 }
 
-func RetrievePlayerByName(username, password string, players []Player) *Player {
+func RetrievePlayerByName(username string, players []Player) *Player {
 	for _, p := range players {
 		if p.Username == username {
-			if password == p.Password {
-				return &p
-			}
-			break
+			return &p
 		}
 	}
 	return nil
@@ -79,8 +76,7 @@ func DeletePlayer(username, password string, players []Player) []Player {
 	return players
 }
 
-
-func SavePlayers(filepath string, players[]Player) bool {
+func SavePlayers(filepath string, players []Player) bool {
 	file, err := os.Create(filepath)
 	if err != nil {
 		return false
