@@ -1,7 +1,6 @@
 package models
 
 type Player struct {
-	Id       int    `json:"id"`
 	Username string `json:"username"`
 	Password string `json:"password"`
 	Cards    []int  `json:"cards"`
@@ -18,19 +17,19 @@ type Card struct {
 }
 
 type Trade struct {
-	Id       int  `json:"id"`
-	Accepted bool `json:"accepted"`
-	PlayerA  int  `json:"playerA"`
-	CardA    int  `json:"cardA"`
-	PlayerB  int  `json:"playerB,omitempty"`
-	CardB    int  `json:"cardB,omitempty"`
+	Id       int    `json:"id"`
+	Accepted bool   `json:"accepted"`
+	PlayerA  string `json:"playerA"`
+	PlayerB  string `json:"playerB,omitempty"`
+	CardA    int    `json:"cardA"`
+	CardB    int    `json:"cardB,omitempty"`
 }
 
 type Match struct {
-	Id      int              `json:"id"`
-	Players map[int]GameInfo `json:"players"`
-	Over    bool             `json:"over"`
-	Turn    int              `json:"turn"` // Indica qual jogador tem a vez
+	Id      int                 `json:"id"`
+	Players map[string]GameInfo `json:"players"`
+	Over    bool                `json:"over"`
+	Turn    string              `json:"turn"` // Indica qual jogador tem a vez
 }
 
 type GameInfo struct {

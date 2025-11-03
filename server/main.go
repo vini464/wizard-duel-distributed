@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"os"
 	"sync"
 	"time"
 	"wizard-duel-distributed/api"
+	"wizard-duel-distributed/communication"
 	"wizard-duel-distributed/utils"
 )
 
@@ -18,11 +20,11 @@ var NETIP string
 const SERVERPREFIX = 6                                   // quantidade de letras no prefixo do servername
 var SERVERHEALTH map[string]bool = make(map[string]bool) // SERVERNAME: isAlive
 var DEFAULTPORT = ":8080"
-var LOGSPATH    = "logs/logs.json"
+var LOGSPATH = "logs/logs.json"
 var PLAYERSPATH = "database/players.json"
 var MATCHESPATH = "database/matches.json"
-var CARDSPATH   = "database/cards.json"
-var TRADESPATH  = "database/trades.json"
+var CARDSPATH = "database/cards.json"
+var TRADESPATH = "database/trades.json"
 var COMMANDQUEUE = make(utils.PriorityQueue, 0)
 var MAPMUTEX sync.Mutex
 var QUEUEMUTEX sync.Mutex
@@ -75,7 +77,28 @@ func propagate(command api.Command) {
 	}
 }
 
+func subscribeChannels(broker net.Conn) bool {
+	topics := []string{"login", "signin", "logout", "buy",
+		"createTrade", "acceptTrade", "tradableCards", "denyTrade",
+		"sujestTrade", "enqueue", "playCard", "skipTurn", "surrender"}
 
+	for _, topic := range topics {
+		message := communication.Message{
+			Cmd: communication.SUBSCRIBE,
+			Tpc: topic,
+		}
+		err := communication.SendMessage(broker, message)
+		if err != nil {
+			return false
+		}
+	}
+
+	return true
+}
+
+func topicHandler(broker net.Conn) {
+
+}
 
 func main() {
 	SERVERNAME = utils.GetSelfAddres()
@@ -101,7 +124,16 @@ func main() {
 		}
 	}
 	go executeCommands()
+	broker, err := net.Dial("tcp", SERVERNAME+communication.BROKERPORT)
+	if err != nil {
+		fmt.Println("[error] - impossible to connect to broker")
+		return
+	}
+	ok := subscribeChannels(broker)
+	if !ok {
+		fmt.Println("[error] - couldn'd subscribe in the topics")
+		return
+	}
+	go topicHandler(broker)
 	handleRequests()
 }
-
-

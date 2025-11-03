@@ -6,7 +6,6 @@
 - Logout   {username - hashedPassword} uses player resource
 
 - BuyBooster       {username - hashedPassword} uses player and card resources
-- SaveDeck         {username - hashedPassword - Deck} uses player resource
 - CreateTrade  {username - hashedPassword - giveAwayCard} uses Player and Trade Resource
 - GetTradableCards {username - hadhedPassword} - uses Player and Trade Resource
 - AcceptOffer {username - hashedPassword - TradeId} uses Player and Trade Resources

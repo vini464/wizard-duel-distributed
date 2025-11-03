@@ -5,7 +5,7 @@ import (
 	"os"
 )
 
-func CreateMatch(playerA, playerB int, deckA, deckB [8]int, matches []Match) []Match {
+func CreateMatch(playerA, playerB string, deckA, deckB [8]int, matches []Match) []Match {
 	id := 0
 	for _, m := range matches {
 		if m.Id >= id {
@@ -22,7 +22,7 @@ func CreateMatch(playerA, playerB int, deckA, deckB [8]int, matches []Match) []M
 		Mana: 0,
 		Deck: deckB,
 	}
-	match := Match{Id: id, Players: make(map[int]GameInfo)}
+	match := Match{Id: id, Players: make(map[string]GameInfo)}
 	match.Players[playerA] = infoA
 	match.Players[playerB] = infoB
 
@@ -53,7 +53,7 @@ func RetrieveMatch(id int, matches []Match) *Match {
 }
 
 // retorna a partida não finalizada
-func RetrieveMatchByPlayer(player int, matches []Match) *Match {
+func RetrieveMatchByPlayer(player string, matches []Match) *Match {
 	for _, m := range matches {
 		_, ok := m.Players[player]
 		if !m.Over && ok {

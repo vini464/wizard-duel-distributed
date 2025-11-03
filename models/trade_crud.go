@@ -5,7 +5,7 @@ import (
 	"os"
 )
 
-func CreateTrade(userId, cardId int, trades []Trade) []Trade {
+func CreateTrade(user string, cardId int, trades []Trade) []Trade {
 	id := 0
 	for _, t := range trades {
 		if t.Id >= id {
@@ -15,7 +15,7 @@ func CreateTrade(userId, cardId int, trades []Trade) []Trade {
 	trade := Trade{
 		Accepted: false,
 		Id:       id,
-		PlayerA:  userId,
+		PlayerA:  user,
 		CardA:    cardId,
 	}
 	trades = append(trades, trade)

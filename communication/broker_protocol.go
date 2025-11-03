@@ -37,7 +37,6 @@ const (
 const (
 	SERVERTYPE = "tcp"
 	BROKERPORT = "7575"
-	SERVERPORT = "8080"
 )
 
 func SendMessage(conn net.Conn, message Message) error {

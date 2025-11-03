@@ -6,14 +6,12 @@ import (
 )
 
 func CreatePlayer(username, password string, players []Player) []Player {
-	id := 0
-	for _, p := range players { // procura pelo maior ID
-		if p.Id >= id {
-			id = p.Id + 1
+	for _, p := range players { // procura por algum username já registrado
+		if p.Username == username {
+			return players 
 		}
 	}
 	player := Player{
-		Id:       id,
 		Username: username,
 		Password: password,
 		Cards:    []int{},
@@ -36,9 +34,9 @@ func RetrievePlayers(filepath string) []Player {
 	return data
 }
 
-func RetrievePlayer(id int, password string, players []Player) *Player {
+func RetrievePlayerByName(username, password string, players []Player) *Player {
 	for _, p := range players {
-		if p.Id == id {
+		if p.Username == username {
 			if password == p.Password {
 				return &p
 			}
@@ -51,7 +49,7 @@ func RetrievePlayer(id int, password string, players []Player) *Player {
 func UpdatePlayer(password string, newdata Player, players []Player) []Player {
 	index := -1
 	for i, p := range players {
-		if p.Id == newdata.Id {
+		if p.Username == newdata.Username {
 			if password == p.Password {
 				index = i
 				break
@@ -65,10 +63,10 @@ func UpdatePlayer(password string, newdata Player, players []Player) []Player {
 	return players
 }
 
-func DeletePlayer(id int, password string, players []Player) []Player {
+func DeletePlayer(username, password string, players []Player) []Player {
 	index := -1
 	for i, player := range players {
-		if player.Id == id {
+		if player.Username == username {
 			if password == player.Password {
 				index = i
 			}

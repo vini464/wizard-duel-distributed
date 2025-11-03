@@ -3,19 +3,19 @@ package main
 import (
 	"fmt"
 	"net"
-	"os"
 
 	"wizard-duel-distributed/communication"
+	"wizard-duel-distributed/utils"
 )
 
-var HOSTNAME = os.Getenv("HOSTNAME")
+var HOSTNAME = utils.GetSelfAddres()
 
 func main() {
-	listener, err := net.Listen(communication.SERVERTYPE, net.JoinHostPort(HOSTNAME, communication.SERVERPORT))
+	listener, err := net.Listen(communication.SERVERTYPE, net.JoinHostPort(HOSTNAME, communication.BROKERPORT))
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("[debug] - server online")
+	fmt.Println("[debug] - broker online")
 
 	broker := NewBroker()
 
