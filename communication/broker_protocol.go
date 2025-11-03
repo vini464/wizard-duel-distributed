@@ -42,6 +42,10 @@ type MatchMessage struct {
 	CardID      int         `json:"cardId,omitempty"`
 }
 
+type MSG interface {
+ MatchMessage | TradeMessage | Credentials | Message
+}
+
 // some cmd and types
 const (
 	UNSUB     = "USUB"
@@ -96,5 +100,10 @@ func ReceiveMessage(conn net.Conn, message *Message) error {
 	// last but not least: unmarshal message data
 	err := json.Unmarshal(data, message)
 
+	return err
+}
+
+func UnmarshalMessage[T MSG](bytes []byte, message *T) error{
+	err := json.Unmarshal(bytes, message)
 	return err
 }

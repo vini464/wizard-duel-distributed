@@ -12,6 +12,7 @@ import (
 	"time"
 	"wizard-duel-distributed/api"
 	"wizard-duel-distributed/communication"
+	"wizard-duel-distributed/models"
 	"wizard-duel-distributed/utils"
 )
 
@@ -77,6 +78,7 @@ func propagate(command api.Command) {
 			http.Post(peer+"api/update", "application/json", bytes.NewBuffer(com))
 		}
 	}
+	MAPMUTEX.Unlock()
 }
 
 func subscribeChannels(broker net.Conn) bool {
@@ -104,6 +106,41 @@ func topicHandler(broker net.Conn) {
 		err := communication.ReceiveMessage(broker, &message)
 		log.Fatal(err)
 		switch message.Cmd {
+		case "login":
+			DATAMUTEX.Lock()
+			var cred communication.Credentials
+			err := communication.UnmarshalMessage(message.Msg, &cred)
+			if err == nil {
+				players := models.RetrievePlayers(PLAYERSPATH)
+				player := models.RetrievePlayerByName(cred.Username, cred.Password, players)
+				ok := player != nil
+				bytes, _ := json.Marshal(ok)
+				msg := communication.Message{
+					Cmd: communication.PUBLISH,
+					Tpc: cred.Username,
+					Msg: bytes,
+				}
+				communication.SendMessage(broker, msg)
+			}
+			DATAMUTEX.Unlock()
+
+		case "tradableCards":
+			DATAMUTEX.Lock()
+			var cred communication.Credentials
+			err := communication.UnmarshalMessage(message.Msg, &cred)
+			if err == nil {
+				trades := models.RetrieveTrades(TRADESPATH)
+				openTrades := models.RetrieveOpenTrades(trades)
+				bytes, _ := json.Marshal(openTrades)
+				msg := communication.Message{
+					Cmd: communication.PUBLISH,
+					Tpc: cred.Username,
+					Msg: bytes,
+				}
+				communication.SendMessage(broker, msg)
+			}
+			DATAMUTEX.Unlock()
+
 
 		}
 	}

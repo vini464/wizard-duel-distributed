@@ -5,9 +5,9 @@ import (
 	"os"
 )
 
-func CreateTrade(user string, cardId int, trades []Trade) []Trade {
+func CreateTrade(user string, cardId int, trades *[]Trade) Trade {
 	id := 0
-	for _, t := range trades {
+	for _, t := range *trades {
 		if t.Id >= id {
 			id = t.Id + 1
 		}
@@ -18,8 +18,8 @@ func CreateTrade(user string, cardId int, trades []Trade) []Trade {
 		PlayerA:  user,
 		CardA:    cardId,
 	}
-	trades = append(trades, trade)
-	return trades
+	*trades = append(*trades, trade)
+	return trade
 }
 
 func RetrieveTrades(filepath string) []Trade {
@@ -44,22 +44,32 @@ func RetrieveTrade(id int, trades []Trade) *Trade {
 	return nil
 }
 
+func RetrieveOpenTrades(trades []Trade) []Trade {
+	openTrades := []Trade{}
+	for _, t := range trades {
+		if t.Accepted == false {
+			openTrades = append(openTrades, t)
+		}
+	}
+	return openTrades
+}
+
 func UpdateTrade(newdata Trade, trades []Trade) []Trade {
 	index := -1
 	for i, t := range trades {
 		if t.Id == newdata.Id {
-			index = i;
+			index = i
 			break
-		} 	
+		}
 	}
 	if index >= 0 {
 		trades = append(trades[:index], trades[index+1:]...)
 		trades = append(trades, newdata)
 	}
-	return  trades
+	return trades
 }
 
-func SaveTrades(filepath string, trades[]Trade) bool {
+func SaveTrades(filepath string, trades []Trade) bool {
 	file, err := os.Create(filepath)
 	if err != nil {
 		return false
@@ -72,4 +82,5 @@ func SaveTrades(filepath string, trades[]Trade) bool {
 	_, err = file.Write(bytes)
 	return err == nil
 }
+
 // não preciso de um delete trade, é bom manter o histórico de trocas

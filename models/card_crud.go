@@ -5,9 +5,9 @@ import (
 	"os"
 )
 
-func CreateCard(manacost, power int, cardname, rarity string, cards []Card) []Card {
+func CreateCard(manacost, power int, cardname, rarity string, cards *[]Card) Card {
 	id := 0
-	for _, c := range cards {
+	for _, c := range *cards {
 		if c.Id >= id {
 			id = c.Id + 1
 		}
@@ -19,9 +19,9 @@ func CreateCard(manacost, power int, cardname, rarity string, cards []Card) []Ca
 		Cardname: cardname,
 		Rarity:   rarity,
 	}
-	cards = append(cards, card)
+	*cards = append(*cards, card)
 
-	return cards
+	return card
 }
 
 func RetrieveCards(filepath string) []Card {
@@ -46,7 +46,7 @@ func RetrieveCard(id int, cards []Card) *Card {
 	return nil
 }
 
-func SaveCards(filepath string, cards[]Card) bool {
+func SaveCards(filepath string, cards []Card) bool {
 	file, err := os.Create(filepath)
 	if err != nil {
 		return false

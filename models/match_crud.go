@@ -5,9 +5,9 @@ import (
 	"os"
 )
 
-func CreateMatch(playerA, playerB string, deckA, deckB [8]int, matches []Match) []Match {
+func CreateMatch(playerA, playerB string, deckA, deckB [8]int, matches *[]Match) Match {
 	id := 0
-	for _, m := range matches {
+	for _, m := range *matches {
 		if m.Id >= id {
 			id = m.Id + 1
 		}
@@ -26,8 +26,8 @@ func CreateMatch(playerA, playerB string, deckA, deckB [8]int, matches []Match) 
 	match.Players[playerA] = infoA
 	match.Players[playerB] = infoB
 
-	matches = append(matches, match)
-	return matches
+	*matches = append(*matches, match)
+	return match
 }
 
 func RetrieveMatches(filepath string) []Match {

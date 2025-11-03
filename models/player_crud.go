@@ -5,10 +5,10 @@ import (
 	"os"
 )
 
-func CreatePlayer(username, password string, players []Player) []Player {
-	for _, p := range players { // procura por algum username já registrado
+func CreatePlayer(username, password string, players *[]Player) *Player {
+	for _, p := range *players { // procura por algum username já registrado
 		if p.Username == username {
-			return players 
+			return nil 
 		}
 	}
 	player := Player{
@@ -17,8 +17,8 @@ func CreatePlayer(username, password string, players []Player) []Player {
 		Cards:    []int{},
 		Coins:    10, // padrão, da pra comprar 2 boosters
 	}
-	players = append(players, player)
-	return players
+	*players = append(*players, player)
+	return &player
 }
 
 func RetrievePlayers(filepath string) []Player {
