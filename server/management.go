@@ -227,6 +227,7 @@ func Enqueue(msg communication.Credentials) (bool, *[]byte) {
 		file, err := os.Create(QUEUEPATH)
 		if err == nil {
 			file.Write(queueBytes)
+			file.Close()
 		}
 		return false, &queueBytes
 	}

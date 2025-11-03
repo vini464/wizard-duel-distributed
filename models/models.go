@@ -4,7 +4,6 @@ type Player struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	Cards    []int  `json:"cards"`
-	Coins    int    `json:"coins"`
 }
 
 type Card struct {

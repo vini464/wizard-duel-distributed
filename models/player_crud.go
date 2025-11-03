@@ -15,7 +15,6 @@ func CreatePlayer(username, password string, players *[]Player) *Player {
 		Username: username,
 		Password: password,
 		Cards:    []int{},
-		Coins:    10, // padrão, da pra comprar 2 boosters
 	}
 	*players = append(*players, player)
 	return &player
