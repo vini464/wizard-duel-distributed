@@ -85,7 +85,7 @@ func propagate(command api.Command) {
 func subscribeChannels(broker net.Conn) bool {
 	topics := []string{"login", "signin", "buy",
 		"createTrade", "acceptTrade", "tradableCards", "denyTrade",
-		"sujestTrade", "enqueue", "playCard", "skipTurn", "surrender"}
+		"sujestTrade", "enqueue", "playCard", "getMatchData", "surrender", "getCards"}
 
 	for _, topic := range topics {
 		message := communication.Message{
@@ -167,6 +167,26 @@ func topicHandler(broker net.Conn) {
 				communication.SendMessage(broker, msg)
 			}
 			DATAMUTEX.Unlock()
+
+		case "getMatchData":
+			DATAMUTEX.Lock()
+			var msg communication.MatchMessage
+			err := communication.UnmarshalMessage(message.Msg, &msg)
+			if err == nil {
+				matches := models.RetrieveMatches(MATCHESPATH)
+				match := models.RetrieveMatch(msg.MatchID, matches)
+				if match != nil {
+				bytes, _ := json.Marshal(*match)
+				msg := communication.Message{
+					Cmd: communication.PUBLISH,
+					Tpc: msg.Credentials.Username,
+					Msg: bytes,
+				}
+				communication.SendMessage(broker, msg)
+				}
+			}
+			DATAMUTEX.Unlock()
+
 		case "signin", "buy", "enqueue":
 			QUEUEMUTEX.Lock()
 			var cred communication.Credentials
@@ -194,6 +214,7 @@ func topicHandler(broker net.Conn) {
 				command := api.Command{
 					NodeID:    SERVERNAME,
 					TimeStamp: now,
+					Operation: message.Cmd,
 					Value:     message.Msg,
 					Resource:  "trade",
 				}
@@ -205,7 +226,7 @@ func topicHandler(broker net.Conn) {
 			}
 			QUEUEMUTEX.Unlock()
 
-		case "playCard", "skipTurn", "surrender":
+		case "playCard", "surrender":
 			QUEUEMUTEX.Lock()
 			var matchMessage communication.MatchMessage
 			err := communication.UnmarshalMessage(message.Msg, &matchMessage)
@@ -215,6 +236,7 @@ func topicHandler(broker net.Conn) {
 					ResourceID: matchMessage.MatchID,
 					TimeStamp:  now,
 					NodeID:     SERVERNAME,
+					Operation: message.Cmd,
 					Value:      message.Msg,
 					Resource:   "match",
 				}

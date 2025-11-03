@@ -20,7 +20,7 @@ func getLatest(logs []api.Command) []api.Command {
 	latests := make(map[int]api.Command) // resource: command
 	for _, command := range logs {
 		com, ok := latests[command.ResourceID]
-		if !ok || com.TimeStamp < command.TimeStamp {
+		if com.Resource == command.Resource && (!ok || com.TimeStamp < command.TimeStamp) {
 			latests[command.ResourceID] = command
 		}
 	}

@@ -5,26 +5,16 @@ import (
 	"os"
 )
 
-func CreateMatch(playerA, playerB string, deckA, deckB [8]int, matches *[]Match) Match {
+func CreateMatch(playerA, playerB string, matches *[]Match) Match {
 	id := 0
 	for _, m := range *matches {
 		if m.Id >= id {
 			id = m.Id + 1
 		}
 	}
-	infoA := GameInfo{
-		Life: 10,
-		Mana: 0,
-		Deck: deckA,
-	}
-	infoB := GameInfo{
-		Life: 10,
-		Mana: 0,
-		Deck: deckB,
-	}
-	match := Match{Id: id, Players: make(map[string]GameInfo)}
-	match.Players[playerA] = infoA
-	match.Players[playerB] = infoB
+	match := Match{Id: id, Players: make(map[string]int)}
+	match.Players[playerA] = 10
+	match.Players[playerB] = 10
 
 	*matches = append(*matches, match)
 	return match

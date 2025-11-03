@@ -26,10 +26,10 @@ type Trade struct {
 }
 
 type Match struct {
-	Id      int                 `json:"id"`
-	Players map[string]GameInfo `json:"players"`
-	Over    bool                `json:"over"`
-	Turn    string              `json:"turn"` // Indica qual jogador tem a vez
+	Id      int            `json:"id"`
+	Players map[string]int `json:"players"` // Username - Life
+	Over    bool           `json:"over"`
+	Turn    string         `json:"turn"` // Indica qual jogador tem a vez
 }
 
 type GameInfo struct {
