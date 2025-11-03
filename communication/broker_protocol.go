@@ -24,6 +24,24 @@ type Message struct {
 	Msg []byte `json:"msg,omitempty"` // description about this field is on the Server-Client protocol file
 }
 
+type Credentials struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
+type TradeMessage struct {
+	Credentials Credentials `json:"credentials"`
+	CardID      int         `json:"cardId,omitempty"`
+	TradeID     int         `json:"tradeId,omitempty"`
+	Status      bool        `json:"status,omitempty"`
+}
+
+type MatchMessage struct {
+	Credentials Credentials `json:"credentials"`
+	MatchID     int         `json:"matchId"`
+	CardID      int         `json:"cardId,omitempty"`
+}
+
 // some cmd and types
 const (
 	UNSUB     = "USUB"

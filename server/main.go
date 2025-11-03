@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -28,6 +29,7 @@ var TRADESPATH = "database/trades.json"
 var COMMANDQUEUE = make(utils.PriorityQueue, 0)
 var MAPMUTEX sync.Mutex
 var QUEUEMUTEX sync.Mutex
+var DATAMUTEX sync.Mutex
 
 func checkPeerHealth(peerAddr string) {
 	for {
@@ -78,7 +80,7 @@ func propagate(command api.Command) {
 }
 
 func subscribeChannels(broker net.Conn) bool {
-	topics := []string{"login", "signin", "logout", "buy",
+	topics := []string{"login", "signin", "buy",
 		"createTrade", "acceptTrade", "tradableCards", "denyTrade",
 		"sujestTrade", "enqueue", "playCard", "skipTurn", "surrender"}
 
@@ -97,7 +99,14 @@ func subscribeChannels(broker net.Conn) bool {
 }
 
 func topicHandler(broker net.Conn) {
+	for {
+		var message communication.Message
+		err := communication.ReceiveMessage(broker, &message)
+		log.Fatal(err)
+		switch message.Cmd {
 
+		}
+	}
 }
 
 func main() {
