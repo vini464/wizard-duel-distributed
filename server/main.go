@@ -27,6 +27,7 @@ var PLAYERSPATH = "database/players.json"
 var MATCHESPATH = "database/matches.json"
 var CARDSPATH = "database/cards.json"
 var TRADESPATH = "database/trades.json"
+var QUEUEPATH = "database/queue.json" // é um vetor de inteiro
 var COMMANDQUEUE = make(utils.PriorityQueue, 0)
 var MAPMUTEX sync.Mutex
 var QUEUEMUTEX sync.Mutex
@@ -104,6 +105,7 @@ func topicHandler(broker net.Conn) {
 	for {
 		var message communication.Message
 		err := communication.ReceiveMessage(broker, &message)
+		now := time.Now().UnixMilli()
 		log.Fatal(err)
 		switch message.Cmd {
 		case "login":
@@ -140,8 +142,59 @@ func topicHandler(broker net.Conn) {
 				communication.SendMessage(broker, msg)
 			}
 			DATAMUTEX.Unlock()
+		case "signin", "buy", "enqueue":
+			QUEUEMUTEX.Lock()
+			var cred communication.Credentials
+			err := communication.UnmarshalMessage(message.Msg, &cred)
+			if err == nil {
+				command := api.Command{
+					ID:        cred.Username + fmt.Sprint(now),
+					NodeID:    SERVERNAME,
+					TimeStamp: now,
+					Value:     message.Msg,
+					Resource:  "player",
+				}
+				if message.Cmd == "enqueue" {
+					command.Resource = "queue"
+				}
+				COMMANDQUEUE.Push(command)
+			}
+			QUEUEMUTEX.Unlock()
+		case "createTrade", "acceptTrade", "denyTrade", "sujestTrade":
+			QUEUEMUTEX.Lock()
+			var trademMessage communication.TradeMessage
+			err := communication.UnmarshalMessage(message.Msg, &trademMessage)
+			if err == nil {
+				command := api.Command{
+					NodeID:    SERVERNAME,
+					TimeStamp: now,
+					Value:     message.Msg,
+					Resource:  "trade",
+				}
+				if message.Cmd != "createTrade" {
+					command.ResourceID = trademMessage.TradeID
+				}
 
+				COMMANDQUEUE.Push(command)
+			}
+			QUEUEMUTEX.Unlock()
 
+		case "playCard", "skipTurn", "surrender":
+			QUEUEMUTEX.Lock()
+			var matchMessage communication.MatchMessage
+			err := communication.UnmarshalMessage(message.Msg, &matchMessage)
+			if err == nil {
+				command := api.Command{
+					ID:         fmt.Sprintf("%d%d", matchMessage.MatchID, now),
+					ResourceID: matchMessage.MatchID,
+					TimeStamp:  now,
+					NodeID:     SERVERNAME,
+					Value:      message.Msg,
+					Resource:   "match",
+				}
+				COMMANDQUEUE.Push(command)
+			}
+			QUEUEMUTEX.Unlock()
 		}
 	}
 }
