@@ -88,7 +88,7 @@ func AcceptTrade(msg communication.TradeMessage) *[]byte {
 	}
 	trades := models.RetrieveTrades(TRADESPATH)
 	trade := models.RetrieveTrade(msg.TradeID, trades)
-	if trade == nil {
+	if trade == nil || trade.Accepted {
 		return nil
 	}
 	p2 := models.RetrievePlayerByName(trade.PlayerB, players)
@@ -137,7 +137,7 @@ func DenyTrade(msg communication.TradeMessage) *[]byte {
 	}
 	trades := models.RetrieveTrades(TRADESPATH)
 	trade := models.RetrieveTrade(msg.TradeID, trades)
-	if trade == nil {
+	if trade == nil || trade.Accepted {
 		return nil
 	}
 	*trade = models.Trade{
@@ -161,7 +161,7 @@ func SuggestTrade(msg communication.TradeMessage) *[]byte {
 	}
 	trades := models.RetrieveTrades(TRADESPATH)
 	trade := models.RetrieveTrade(msg.TradeID, trades)
-	if trade == nil {
+	if trade == nil || trade.Accepted {
 		return nil
 	}
 	trade.CardB = msg.CardID
@@ -212,7 +212,7 @@ func Surrender(msg communication.MatchMessage) *[]byte {
 	matches := models.RetrieveMatches(MATCHESPATH)
 	match := models.RetrieveMatch(msg.MatchID, matches)
 
-	if player == nil || match == nil || match.Turn != player.Username {
+	if match.Over || player == nil || match == nil || match.Turn != player.Username {
 		return nil
 	}
 
