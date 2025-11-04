@@ -196,6 +196,18 @@ func main() {
 			c := utils.Input("id: ")
 			tradeId, _ := strconv.ParseInt(c, 10, 0)
 			communication.SendMessage(conn, denyTrade(cred, int(tradeId)))
+		case "match":
+			communication.SendMessage(conn, match(cred))
+		case "play":
+			c := utils.Input("id: ")
+			cardId, _ := strconv.ParseInt(c, 10, 0)
+			c = utils.Input("id: ")
+			matchId, _ := strconv.ParseInt(c, 10, 0)
+			communication.SendMessage(conn, playCard(cred, int(cardId), int(matchId)))
+		case "surrender":
+			c := utils.Input("id: ")
+			matchId, _ := strconv.ParseInt(c, 10, 0)
+			communication.SendMessage(conn, surrender(cred, int(matchId)))
 		}
 	}
 }
