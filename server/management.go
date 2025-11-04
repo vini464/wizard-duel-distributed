@@ -49,6 +49,7 @@ func Buy(credentials communication.Credentials) *[]byte {
 			}
 			if rnd < minqnt {
 				booster = append(booster, card)
+				break
 			} else {
 				rnd -= minqnt
 			}
@@ -57,6 +58,7 @@ func Buy(credentials communication.Credentials) *[]byte {
 	for _, card := range booster {
 		player.Cards = append(player.Cards, card.Id)
 	}
+	models.UpdatePlayer(player.Password, *player, players)
 	models.SavePlayers(PLAYERSPATH, players)
 	bytes, _ := json.Marshal(player)
 	return &bytes

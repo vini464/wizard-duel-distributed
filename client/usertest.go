@@ -61,6 +61,15 @@ func getTrades(credentials communication.Credentials) communication.Message {
 	}
 }
 
+func getBooster(credentials communication.Credentials) communication.Message {
+	bytes, _ := json.Marshal(credentials)
+	return communication.Message{
+		Cmd: communication.PUBLISH,
+		Tpc: "buy",
+		Msg: bytes,
+	}
+}
+
 func main() {
 	conn, err := net.Dial("tcp", HOSTNAME+communication.BROKERPORT)
 	if err != nil {
@@ -90,6 +99,8 @@ func main() {
 			communication.SendMessage(conn, createTrade(cred, int(cardId)))
 		case "trades":
 			communication.SendMessage(conn, getTrades(cred))
+		case "buy":
+			communication.SendMessage(conn, getBooster(cred))
 		}
 	}
 }
