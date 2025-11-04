@@ -110,6 +110,40 @@ func getBooster(credentials communication.Credentials) communication.Message {
 	}
 }
 
+func match(credentials communication.Credentials) communication.Message {
+	bytes, _ := json.Marshal(credentials)
+	return communication.Message{
+		Cmd: communication.PUBLISH,
+		Tpc: "enqueue",
+		Msg: bytes,
+	}
+}
+func playCard(credentials communication.Credentials, cardId, matchId int) communication.Message {
+	matchMessage := communication.MatchMessage{
+		Credentials: credentials,
+		MatchID:     matchId,
+		CardID:      cardId,
+	}
+	bytes, _ := json.Marshal(matchMessage)
+	return communication.Message{
+		Cmd: communication.PUBLISH,
+		Tpc: "playCard",
+		Msg: bytes,
+	}
+}
+func surrender(credentials communication.Credentials, matchId int) communication.Message {
+	matchMessage := communication.MatchMessage{
+		Credentials: credentials,
+		MatchID:     matchId,
+	}
+	bytes, _ := json.Marshal(matchMessage)
+	return communication.Message{
+		Cmd: communication.PUBLISH,
+		Tpc: "surrender",
+		Msg: bytes,
+	}
+}
+
 var IOMUTEX sync.Mutex
 
 func main() {
@@ -124,6 +158,7 @@ func main() {
 	}
 	communication.SendMessage(conn, msg) // me inscrevendo no topico
 	go func() {
+		fmt.Println("received message")
 		bytes := communication.ReceiveBytes(conn)
 		IOMUTEX.Lock()
 		fmt.Println("\nReceived: ", string(bytes))

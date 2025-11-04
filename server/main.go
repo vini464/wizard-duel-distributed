@@ -107,6 +107,7 @@ func runCommand(command api.Command) {
 			path = PLAYERSPATH
 		}
 		file, err := os.Create(path)
+		fmt.Println("[debug] error in queue/players ", err)
 		if err == nil {
 			file.Write(command.Value)
 			file.Close()
@@ -222,7 +223,7 @@ func executeCommands() {
 						c.Operation = "update"
 						c.Value = *bytes
 						propagate(*c)
-						c.Resource = "Players"
+						c.Resource = "players"
 						c.ResourceID = "players"
 						c.ID = fmt.Sprintf("%s%d", c.ResourceID, c.TimeStamp)
 						players := models.RetrievePlayers(PLAYERSPATH)
