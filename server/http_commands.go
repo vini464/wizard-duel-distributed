@@ -46,6 +46,9 @@ func syncLogs(w http.ResponseWriter, r *http.Request) {
 	logs = getLatest(logs)        // diff completa
 
 	// executar comandos do log, sem pedir permissão pois é pra sincronizar os logs
+	for _, c := range logs {
+		runCommand(c)
+	}
 
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(logs)

@@ -15,18 +15,21 @@ func Request(timestamp int64) {
 	var wg sync.WaitGroup
 
 	for peer := range SERVERHEALTH {
-		wg.Add(1)
-		go func() {
-			buff, err := json.Marshal(api.Message{Type: "Request", Commands: []byte(strconv.FormatInt(timestamp, 10))})
-			if err != nil {
-				return
-			}
-			resp, err := http.Post("http://"+peer+DEFAULTPORT+"/api/token", "application/json", bytes.NewBuffer(buff))
-			for err != nil || resp.Status != "200 OK" {
-				resp, err = http.Post("http://"+peer+DEFAULTPORT+"/api/token", "application/json", bytes.NewBuffer(buff))
-			}
-			defer wg.Done()
-		}()
+		if SERVERHEALTH[peer] {
+			wg.Add(1)
+			go func() {
+				buff, err := json.Marshal(api.Message{Type: "Request", Commands: []byte(strconv.FormatInt(timestamp, 10))})
+				if err != nil {
+					return
+				}
+				resp, err := http.Post(peer+"/api/request", "application/json", bytes.NewBuffer(buff))
+				for err != nil || resp.Status != "200 OK" {
+					resp, err = http.Post(peer+"/api/request", "application/json", bytes.NewBuffer(buff))
+				}
+				defer wg.Done()
+			}()
+
+		}
 	}
 	wg.Wait()
 	ONCRITICALREGION = true

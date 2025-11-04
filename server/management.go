@@ -11,7 +11,7 @@ import (
 
 func Signup(credentials communication.Credentials) *[]byte {
 	players := models.RetrievePlayers(PLAYERSPATH)
-	player := models.CreatePlayer(credentials.Username, credentials.Username, &players)
+	player := models.CreatePlayer(credentials.Username, credentials.Password, &players)
 	if player == nil {
 		return nil
 	}

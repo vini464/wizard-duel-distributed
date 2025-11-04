@@ -32,6 +32,7 @@ var COMMANDQUEUE = make(utils.PriorityQueue, 0)
 var MAPMUTEX sync.Mutex
 var QUEUEMUTEX sync.Mutex
 var DATAMUTEX sync.Mutex
+var CHECKEDALL = false
 
 func checkPeerHealth(peerAddr string) {
 	for {
@@ -58,13 +59,66 @@ func checkPeerHealth(peerAddr string) {
 	}
 }
 
+func runCommand(command api.Command) {
+	UpdateLogs(LOGSPATH, command)
+	switch command.Resource {
+	case "player":
+		players := models.RetrievePlayers(PLAYERSPATH)
+		var player models.Player
+		json.Unmarshal(command.Value, &player)
+
+		switch command.Operation {
+		case "create":
+			players = append(players, player)
+		case "update":
+			models.UpdatePlayer(player.Password, player, players)
+		}
+		models.SavePlayers(PLAYERSPATH, players)
+	case "match":
+		matches := models.RetrieveMatches(MATCHESPATH)
+		var match models.Match
+		json.Unmarshal(command.Value, &match)
+		switch command.Operation {
+		case "create":
+			matches = append(matches, match)
+		case "update":
+			models.UpdateMatch(match, matches)
+		}
+		models.SaveMatches(MATCHESPATH, matches)
+	case "trade":
+		trades := models.RetrieveTrades(TRADESPATH)
+		var trade models.Trade
+		json.Unmarshal(command.Value, &trade)
+		switch command.Operation {
+		case "create":
+			trades = append(trades, trade)
+		case "update":
+			models.UpdateTrade(trade, trades)
+		}
+		models.SaveTrades(TRADESPATH, trades)
+	case "queue", "players":
+		path := QUEUEPATH
+		if command.Resource == "players" {
+			path = PLAYERSPATH
+		}
+		file, err := os.Create(path)
+		if err == nil {
+			file.Write(command.Value)
+			file.Close()
+		}
+	default:
+		fmt.Println("[debug]: Unknown Command")
+
+	}
+
+}
+
 func executeCommands() {
 	for {
 		if len(COMMANDQUEUE) > 0 {
 			Request(COMMANDQUEUE.Front().TimeStamp)
 			fmt.Println("[debug] executing a command")
 			c := COMMANDQUEUE.Pop()
-			// propagando informação
 			switch c.Operation {
 			case "signup":
 				var cred communication.Credentials
@@ -195,6 +249,7 @@ func executeCommands() {
 			default:
 				fmt.Println("Uknown Command")
 			}
+			// propagando informação
 			ONCRITICALREGION = false
 		}
 	}
@@ -202,11 +257,13 @@ func executeCommands() {
 
 func propagate(command api.Command) {
 	UpdateLogs(LOGSPATH, command)
+	fmt.Println("propadando")
 	MAPMUTEX.Lock()
 	for peer, alive := range SERVERHEALTH {
 		if alive {
 			com, _ := json.Marshal(command)
-			http.Post(peer+"api/update", "application/json", bytes.NewBuffer(com))
+			_, err := http.Post(peer+"/api/update", "application/json", bytes.NewBuffer(com))
+			fmt.Println("err; ", err)
 		}
 	}
 	MAPMUTEX.Unlock()
@@ -236,7 +293,10 @@ func topicHandler(broker net.Conn) {
 		var message communication.Message
 		err := communication.ReceiveMessage(broker, &message)
 		now := time.Now().UnixMilli()
-		log.Fatal(err)
+		if err != nil {
+
+			log.Fatal(err)
+		}
 		switch message.Cmd {
 		case "getCards":
 			DATAMUTEX.Lock()
@@ -393,15 +453,33 @@ func main() {
 			go checkPeerHealth("http://" + peername + DEFAULTPORT)
 		}
 	}
+
+	time.Sleep(time.Second * 5)
+	MAPMUTEX.Lock()
 	for peer, alive := range SERVERHEALTH {
+		fmt.Println("Syncing logs = ", peer)
 		if alive {
 			var logs, err = os.ReadFile(LOGSPATH)
 			if err != nil {
 				logs, _ = json.Marshal([]api.Command{}) // inicia um vetor vazio caso não consiga abrir o arquivo de logs
 			}
-			http.Post(peer+DEFAULTPORT+"/api/sync", "application/json", bytes.NewBuffer(logs))
+			resp, err := http.Post(peer+"/api/sync", "application/json", bytes.NewBuffer(logs))
+			fmt.Println("error -> ", err)
+
+			if err == nil {
+				fmt.Println("resp status -> ", resp.Status)
+				logs := []api.Command{}
+				json.NewDecoder(resp.Body).Decode(&logs)
+				fmt.Println("logs: ", logs)
+				for _, log := range logs {
+					fmt.Println("running command: ", log)
+					runCommand(log)
+				}
+			}
+			break // so precisa sincronizar com um servidor
 		}
 	}
+	MAPMUTEX.Unlock()
 	go executeCommands()
 	broker, err := net.Dial("tcp", SERVERNAME+communication.BROKERPORT)
 	if err != nil {

@@ -11,7 +11,7 @@ import (
 var HOSTNAME = utils.GetSelfAddres()
 
 func main() {
-	listener, err := net.Listen(communication.SERVERTYPE, net.JoinHostPort(HOSTNAME, communication.BROKERPORT))
+	listener, err := net.Listen(communication.SERVERTYPE, HOSTNAME+ communication.BROKERPORT)
 	if err != nil {
 		panic(err)
 	}
