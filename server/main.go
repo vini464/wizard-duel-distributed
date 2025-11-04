@@ -52,6 +52,9 @@ func checkPeerHealth(peerAddr string) {
 			var msg api.Message
 			err := json.NewDecoder(resp.Body).Decode(&msg)
 			if err == nil && msg.Type == "ACK" {
+				if !SERVERHEALTH[peerAddr] {
+					updatlogs()
+				}
 				SERVERHEALTH[peerAddr] = true
 				respBody := []byte{}
 				resp.Body.Read(respBody)
@@ -464,6 +467,23 @@ func main() {
 	}
 
 	time.Sleep(time.Second * 5)
+	updatlogs()
+	go executeCommands()
+	broker, err := net.Dial("tcp", SERVERNAME+communication.BROKERPORT)
+	if err != nil {
+		fmt.Println("[error] - impossible to connect to broker")
+		return
+	}
+	ok := subscribeChannels(broker)
+	if !ok {
+		fmt.Println("[error] - couldn'd subscribe in the topics")
+		return
+	}
+	go topicHandler(broker)
+	handleRequests()
+}
+
+func updatlogs() {
 	MAPMUTEX.Lock()
 	for peer, alive := range SERVERHEALTH {
 		if alive {
@@ -489,17 +509,4 @@ func main() {
 		}
 	}
 	MAPMUTEX.Unlock()
-	go executeCommands()
-	broker, err := net.Dial("tcp", SERVERNAME+communication.BROKERPORT)
-	if err != nil {
-		fmt.Println("[error] - impossible to connect to broker")
-		return
-	}
-	ok := subscribeChannels(broker)
-	if !ok {
-		fmt.Println("[error] - couldn'd subscribe in the topics")
-		return
-	}
-	go topicHandler(broker)
-	handleRequests()
 }
