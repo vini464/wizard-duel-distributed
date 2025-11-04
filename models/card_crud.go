@@ -5,7 +5,7 @@ import (
 	"os"
 )
 
-func CreateCard(manacost, power int, cardname, rarity string, cards *[]Card) Card {
+func CreateCard(power int, cardname, rarity string, cards *[]Card) Card {
 	id := 0
 	for _, c := range *cards {
 		if c.Id >= id {
@@ -14,7 +14,6 @@ func CreateCard(manacost, power int, cardname, rarity string, cards *[]Card) Car
 	}
 	card := Card{
 		Id:       id,
-		Manacost: manacost,
 		Power:    power,
 		Cardname: cardname,
 		Rarity:   rarity,

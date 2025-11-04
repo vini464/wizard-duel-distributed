@@ -50,7 +50,7 @@ func Buy(credentials communication.Credentials) *[]byte {
 			if rnd < minqnt {
 				booster = append(booster, card)
 			} else {
-				rnd -= card.Quantity
+				rnd -= minqnt
 			}
 		}
 	}

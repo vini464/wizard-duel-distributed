@@ -1,1 +1,23 @@
-[]
+[
+  { "id": 1, "power": 5, "cardname": "Goblin Espancador", "rarity": "common" },
+  { "id": 2, "power": 8, "cardname": "Cavaleiro de Ferro", "rarity": "uncommon" },
+  { "id": 3, "power": 12, "cardname": "Dragão de Cinzas", "rarity": "rare" },
+  { "id": 4, "power": 20, "cardname": "Fênix do Crepúsculo", "rarity": "legend" },
+  { "id": 5, "power": 3, "cardname": "Rato de Esgoto", "rarity": "common" },
+  { "id": 6, "power": 7, "cardname": "Arqueira do Norte", "rarity": "uncommon" },
+  { "id": 7, "power": 10, "cardname": "Mago das Sombras", "rarity": "rare" },
+  { "id": 8, "power": 18, "cardname": "Titã de Pedra", "rarity": "legend" },
+  { "id": 9, "power": 4, "cardname": "Soldado Raso", "rarity": "common" },
+  { "id": 10, "power": 6, "cardname": "Assassina do Vento", "rarity": "uncommon" },
+  { "id": 11, "power": 11, "cardname": "Serpente do Mar", "rarity": "rare" },
+  { "id": 12, "power": 22, "cardname": "Deus do Caos", "rarity": "legend" },
+  { "id": 13, "power": 2, "cardname": "Camponês Bravo", "rarity": "common" },
+  { "id": 14, "power": 9, "cardname": "Caçador da Lua", "rarity": "uncommon" },
+  { "id": 15, "power": 14, "cardname": "Guardião das Runas", "rarity": "rare" },
+  { "id": 16, "power": 25, "cardname": "Anjo Caído", "rarity": "legend" },
+  { "id": 17, "power": 1, "cardname": "Esquilo Heróico", "rarity": "common" },
+  { "id": 18, "power": 7, "cardname": "Mercenário do Deserto", "rarity": "uncommon" },
+  { "id": 19, "power": 13, "cardname": "Elemental do Trovão", "rarity": "rare" },
+  { "id": 20, "power": 30, "cardname": "Rei Imortal", "rarity": "legend" }
+]
+

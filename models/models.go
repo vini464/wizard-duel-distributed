@@ -8,9 +8,7 @@ type Player struct {
 
 type Card struct {
 	Id       int    `json:"id"`
-	Manacost int    `json:"manacost"`
 	Power    int    `json:"power"`
-	Quantity int    `json:"quantity,omitempty"`
 	Cardname string `json:"cardname"`
 	Rarity   string `json:"rarity"`
 }
