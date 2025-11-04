@@ -3,16 +3,16 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 )
 
 var PLAYERSPATH = "database/players.json"
 var MATCHESPATH = "database/matches.json"
-var CARDSPATH = "database/cards.json"
 var TRADESPATH = "database/trades.json"
 var QUEUEPATH = "database/queue.json" // é um vetor de inteiro
 
-func main(){
-for {
+func main() {
+	for {
 		players, err := os.ReadFile(PLAYERSPATH)
 		if err == nil {
 			fmt.Println("Players: ", string(players))
@@ -21,11 +21,7 @@ for {
 		if err == nil {
 			fmt.Println("Matches: ", string(matches))
 		}
-		cards, err := os.ReadFile(CARDSPATH)
-		if err == nil {
-			fmt.Println("Cards: ", string(cards))
-		}
-		trades, err := os.ReadFile(CARDSPATH)
+		trades, err := os.ReadFile(TRADESPATH)
 		if err == nil {
 			fmt.Println("Trades: ", string(trades))
 		}
@@ -33,6 +29,8 @@ for {
 		if err == nil {
 			fmt.Println("Queue: ", string(queue))
 		}
+
+		time.Sleep(time.Second * 2)
 	}
 
 }
