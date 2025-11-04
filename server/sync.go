@@ -41,6 +41,11 @@ func UpdateLogs(filepath string, command api.Command) {
 		var logs []api.Command
 		err = json.Unmarshal(bytes, &logs)
 		if err == nil {
+			for _, l := range logs { // se o comando já existe nos logs, não adiciona
+				if l.ID == command.ID {
+					return
+				}
+			}
 			logs = append(logs, command)
 			bytes, _ = json.Marshal(logs)
 			file, err := os.Create(filepath)
