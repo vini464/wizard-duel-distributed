@@ -225,7 +225,7 @@ func Surrender(msg communication.MatchMessage) *[]byte {
 func Enqueue(msg communication.Credentials) (bool, *[]byte) {
 	players := models.RetrievePlayers(PLAYERSPATH)
 	player := models.RetrievePlayerByName(msg.Username, players)
-	if player == nil || player.Username == msg.Username {
+	if player == nil {
 		return false, nil
 	}
 	queueBytes, err := os.ReadFile(QUEUEPATH)
@@ -245,10 +245,13 @@ func Enqueue(msg communication.Credentials) (bool, *[]byte) {
 			file.Close()
 		}
 		return false, &queueBytes
+	} else if queue[0] == player.Username {
+		return false, nil
 	}
 
 	matches := models.RetrieveMatches(MATCHESPATH)
 	match := models.CreateMatch(msg.Username, queue[0], &matches)
+	match.Turn = player.Username
 	models.SaveMatches(MATCHESPATH, matches)
 	bytes, _ := json.Marshal(match)
 
@@ -257,6 +260,7 @@ func Enqueue(msg communication.Credentials) (bool, *[]byte) {
 		queue = []string{}
 		queueBytes, _ = json.Marshal(queue)
 		file.Write(queueBytes)
+		file.Close()
 	}
 	return true, &bytes
 }
