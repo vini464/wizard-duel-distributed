@@ -158,11 +158,13 @@ func main() {
 	}
 	communication.SendMessage(conn, msg) // me inscrevendo no topico
 	go func() {
-		fmt.Println("received message")
-		bytes := communication.ReceiveBytes(conn)
-		IOMUTEX.Lock()
-		fmt.Println("\nReceived: ", string(bytes))
-		IOMUTEX.Unlock()
+		for {
+			bytes := communication.ReceiveBytes(conn)
+			fmt.Println("received message")
+			IOMUTEX.Lock()
+			fmt.Println("\nReceived: ", string(bytes))
+			IOMUTEX.Unlock()
+		}
 	}()
 
 	for {
