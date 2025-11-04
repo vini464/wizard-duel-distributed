@@ -49,10 +49,16 @@ func checkPeerHealth(peerAddr string) {
 				}
 			}
 		} else {
-			SERVERHEALTH[peerAddr] = true
-			respBody := []byte{}
-			resp.Body.Read(respBody)
-			fmt.Println("[debug] - ", peerAddr, " - ", resp.Status, " - ", string(respBody))
+			var msg api.Message
+			err := json.NewDecoder(resp.Body).Decode(&msg)
+			if err == nil && msg.Type == "ACK" {
+				SERVERHEALTH[peerAddr] = true
+				respBody := []byte{}
+				resp.Body.Read(respBody)
+
+				fmt.Println("[debug] - ", peerAddr, " - ", resp.Status, " - ", string(respBody))
+
+			}
 		}
 		MAPMUTEX.Unlock()
 		time.Sleep(1 * time.Second)
@@ -441,7 +447,7 @@ func topicHandler(broker net.Conn) {
 func main() {
 	SERVERNAME = utils.GetSelfAddres()
 	fmt.Println(SERVERNAME)
-	NETIP = utils.GetNetworkAddress()
+	NETIP = utils.GetNetworkAddress(SERVERNAME)
 
 	// quando um server inicia, ele procura por todos os servidores de 0 a 10 e adiciona no SERVERHEALTH
 	fmt.Println("Server is starting")
@@ -456,8 +462,8 @@ func main() {
 	time.Sleep(time.Second * 5)
 	MAPMUTEX.Lock()
 	for peer, alive := range SERVERHEALTH {
-		fmt.Println("Syncing logs = ", peer)
 		if alive {
+		fmt.Println("Syncing logs = ", peer)
 			var logs, err = os.ReadFile(LOGSPATH)
 			if err != nil {
 				logs, _ = json.Marshal([]api.Command{}) // inicia um vetor vazio caso não consiga abrir o arquivo de logs

@@ -1,0 +1,35 @@
+
+services:
+  broker:
+    build:
+      context: "./"
+      dockerfile: "./broker/Dockerfile"
+    image: "broker:v1"
+    container_name: "broker"
+    ports: 
+      - "7575:7575"
+    network_mode: "host"
+    volumes:
+        - ./database:/app/database:rw
+
+  server:
+    build:
+      context: "./"
+      dockerfile: "./server/Dockerfile"
+    image: "server:v1"
+    container_name: "server"
+    ports: 
+      - "8080:8080"
+    network_mode: "host"
+    volumes:
+        - ./database:/app/database:rw
+        - ./logs:/app/logs:rw
+  
+  client:
+    build:
+      context: "./"
+      dockerfile: "./client/Dockerfile"
+    image: "client:v1"
+    tty: true
+    stdin_open: true
+    network_mode: "host"

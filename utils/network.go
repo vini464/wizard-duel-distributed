@@ -12,7 +12,18 @@ func GetSelfAddres() string{
 	return localAddress.IP.String()
 }
 
-func GetNetworkAddress() string{
+func GetNetworkAddress(ip_address string) string{
 	// procurando pelo terceiro ponto
-	return Input("digite o ip da rede: ")
+	times := 0
+	id := 0
+	for i, c := range ip_address {
+		if c == '.' {
+			times ++ 
+			if times == 3 {
+				id  = i
+				break
+			}
+		}
+	}
+	return ip_address[:id]
 }

@@ -11,6 +11,7 @@ import (
 var HOSTNAME = utils.GetSelfAddres()
 
 func main() {
+	fmt.Println("[debug] - trying to connect")
 	listener, err := net.Listen(communication.SERVERTYPE, HOSTNAME+ communication.BROKERPORT)
 	if err != nil {
 		panic(err)
