@@ -252,6 +252,7 @@ func Enqueue(msg communication.Credentials) (bool, *[]byte) {
 	matches := models.RetrieveMatches(MATCHESPATH)
 	match := models.CreateMatch(msg.Username, queue[0], &matches)
 	match.Turn = player.Username
+	matches = models.UpdateMatch(match, matches)
 	models.SaveMatches(MATCHESPATH, matches)
 	bytes, _ := json.Marshal(match)
 
