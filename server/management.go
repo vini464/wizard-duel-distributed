@@ -224,8 +224,8 @@ func Surrender(msg communication.MatchMessage) *[]byte {
 
 func Enqueue(msg communication.Credentials) (bool, *[]byte) {
 	players := models.RetrievePlayers(PLAYERSPATH)
-	player := models.CreatePlayer(msg.Username, msg.Username, &players)
-	if player == nil {
+	player := models.RetrievePlayerByName(msg.Username, players)
+	if player == nil || player.Username == msg.Username {
 		return false, nil
 	}
 	queueBytes, err := os.ReadFile(QUEUEPATH)
