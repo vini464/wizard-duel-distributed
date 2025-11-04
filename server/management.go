@@ -105,12 +105,13 @@ func AcceptTrade(msg communication.TradeMessage) *[]byte {
 
 	id = 0
 	p2 := models.RetrievePlayerByName(trade.PlayerB, players)
-	if id >= 0 {
+	if id >= 0 && p2 != nil{
 		p2.Cards = append(p2.Cards[:id], p2.Cards[id+1:]...)
 		p2.Cards = append(p2.Cards, trade.CardA)
 	}
 
 	trade.Accepted = true
+	trades = models.UpdateTrade(*trade, trades)
 	models.SaveTrades(TRADESPATH, trades)
 	models.SavePlayers(PLAYERSPATH, players)
 	bytes, _ := json.Marshal(*trade)
@@ -135,6 +136,7 @@ func DenyTrade(msg communication.TradeMessage) *[]byte {
 		PlayerA:  trade.PlayerA,
 		CardA:    trade.CardA,
 	}
+	trades = models.UpdateTrade(*trade, trades)
 	models.SaveTrades(TRADESPATH, trades)
 	bytes, _ := json.Marshal(*trade)
 	return &bytes
@@ -155,6 +157,7 @@ func SuggestTrade(msg communication.TradeMessage) *[]byte {
 	trade.CardB = msg.CardID
 	trade.PlayerB = msg.Credentials.Username
 
+	trades = models.UpdateTrade(*trade, trades)
 	models.SaveTrades(TRADESPATH, trades)
 	bytes, _ := json.Marshal(*trade)
 	return &bytes
