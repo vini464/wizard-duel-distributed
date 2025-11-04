@@ -201,6 +201,7 @@ func PlayCard(msg communication.MatchMessage) *[]byte {
 	} else {
 		match.Over = true
 	}
+	matches = models.UpdateMatch(*match, matches)
 	models.SaveMatches(MATCHESPATH, matches)
 	bytes, _ := json.Marshal(*match)
 	return &bytes
@@ -217,6 +218,7 @@ func Surrender(msg communication.MatchMessage) *[]byte {
 	}
 
 	match.Over = true
+	matches = models.UpdateMatch(*match, matches)
 	models.SaveMatches(MATCHESPATH, matches)
 	bytes, _ := json.Marshal(*match)
 	return &bytes
