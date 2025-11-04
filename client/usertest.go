@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"strconv"
+	"sync"
 	"wizard-duel-distributed/communication"
 	"wizard-duel-distributed/utils"
 )
@@ -61,6 +62,45 @@ func getTrades(credentials communication.Credentials) communication.Message {
 	}
 }
 
+func suggestTrade(credentials communication.Credentials, tradeId, cardId int) communication.Message {
+	msg := communication.TradeMessage{
+		Credentials: credentials,
+		TradeID:     tradeId,
+		CardID:      cardId,
+	}
+	bytes, _ := json.Marshal(msg)
+	return communication.Message{
+		Cmd: communication.PUBLISH,
+		Tpc: "suggestTrade",
+		Msg: bytes,
+	}
+}
+
+func acceptTrade(credentials communication.Credentials, tradeId int) communication.Message {
+	msg := communication.TradeMessage{
+		Credentials: credentials,
+		TradeID:     tradeId,
+	}
+	bytes, _ := json.Marshal(msg)
+	return communication.Message{
+		Cmd: communication.PUBLISH,
+		Tpc: "acceptTrade",
+		Msg: bytes,
+	}
+}
+func denyTrade(credentials communication.Credentials, tradeId int) communication.Message {
+	msg := communication.TradeMessage{
+		Credentials: credentials,
+		TradeID:     tradeId,
+	}
+	bytes, _ := json.Marshal(msg)
+	return communication.Message{
+		Cmd: communication.PUBLISH,
+		Tpc: "denyTrade",
+		Msg: bytes,
+	}
+}
+
 func getBooster(credentials communication.Credentials) communication.Message {
 	bytes, _ := json.Marshal(credentials)
 	return communication.Message{
@@ -70,24 +110,30 @@ func getBooster(credentials communication.Credentials) communication.Message {
 	}
 }
 
+var IOMUTEX sync.Mutex
+
 func main() {
 	conn, err := net.Dial("tcp", HOSTNAME+communication.BROKERPORT)
 	if err != nil {
 		panic(err)
 	}
 	cred := getCredentials()
-	msg := communication.Message {
+	msg := communication.Message{
 		Tpc: cred.Username,
 		Cmd: communication.SUBSCRIBE,
 	}
 	communication.SendMessage(conn, msg) // me inscrevendo no topico
 	go func() {
 		bytes := communication.ReceiveBytes(conn)
-		fmt.Println("Received: ", string(bytes))
+		IOMUTEX.Lock()
+		fmt.Println("\nReceived: ", string(bytes))
+		IOMUTEX.Unlock()
 	}()
 
 	for {
+		IOMUTEX.Lock()
 		test := utils.Input("o que testar? ")
+		IOMUTEX.Unlock()
 		switch test {
 		case "create":
 			communication.SendMessage(conn, createUser(cred))
@@ -97,10 +143,24 @@ func main() {
 			c := utils.Input("id: ")
 			cardId, _ := strconv.ParseInt(c, 10, 0)
 			communication.SendMessage(conn, createTrade(cred, int(cardId)))
-		case "trades":
-			communication.SendMessage(conn, getTrades(cred))
 		case "buy":
 			communication.SendMessage(conn, getBooster(cred))
+		case "trades":
+			communication.SendMessage(conn, getTrades(cred))
+		case "suggest":
+			c := utils.Input("id: ")
+			cardId, _ := strconv.ParseInt(c, 10, 0)
+			c = utils.Input("id: ")
+			tradeId, _ := strconv.ParseInt(c, 10, 0)
+			communication.SendMessage(conn, suggestTrade(cred, int(tradeId), int(cardId)))
+		case "accept":
+			c := utils.Input("id: ")
+			tradeId, _ := strconv.ParseInt(c, 10, 0)
+			communication.SendMessage(conn, acceptTrade(cred, int(tradeId)))
+		case "deny":
+			c := utils.Input("id: ")
+			tradeId, _ := strconv.ParseInt(c, 10, 0)
+			communication.SendMessage(conn, denyTrade(cred, int(tradeId)))
 		}
 	}
 }
