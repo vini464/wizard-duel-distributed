@@ -133,8 +133,8 @@ func executeCommands() {
 					if bytes != nil {
 						c.Value = *bytes
 						c.Operation = "create"
+						propagate(*c)
 					}
-					propagate(*c)
 				}
 			case "buy":
 				var cred communication.Credentials
@@ -144,8 +144,8 @@ func executeCommands() {
 					if bytes != nil {
 						c.Value = *bytes
 						c.Operation = "update"
+						propagate(*c)
 					}
-					propagate(*c)
 				}
 			case "enqueue":
 				var cred communication.Credentials
@@ -165,10 +165,11 @@ func executeCommands() {
 							queue := []int{}
 							*bytes, _ = json.Marshal(queue)
 							c.Value = *bytes
+							propagate(*c)
 						} else {
 							c.Operation = "update"
+							propagate(*c)
 						}
-						propagate(*c)
 					}
 				}
 			case "playCard":
@@ -205,8 +206,8 @@ func executeCommands() {
 						c.ResourceID = fmt.Sprint(tradeMsg.TradeID)
 						c.Operation = "create"
 						c.Value = *bytes
+						propagate(*c)
 					}
-					propagate(*c)
 				}
 			// adicionar o commandID e o resource ID
 
@@ -238,6 +239,7 @@ func executeCommands() {
 					if bytes != nil {
 						c.Operation = "update"
 						c.Value = *bytes
+						propagate(*c)
 					}
 				}
 
@@ -249,6 +251,7 @@ func executeCommands() {
 					if bytes != nil {
 						c.Operation = "update"
 						c.Value = *bytes
+						propagate(*c)
 					}
 				}
 			default:
@@ -463,7 +466,7 @@ func main() {
 	MAPMUTEX.Lock()
 	for peer, alive := range SERVERHEALTH {
 		if alive {
-		fmt.Println("Syncing logs = ", peer)
+			fmt.Println("Syncing logs = ", peer)
 			var logs, err = os.ReadFile(LOGSPATH)
 			if err != nil {
 				logs, _ = json.Marshal([]api.Command{}) // inicia um vetor vazio caso não consiga abrir o arquivo de logs

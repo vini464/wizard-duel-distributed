@@ -88,7 +88,8 @@ func AcceptTrade(msg communication.TradeMessage) *[]byte {
 	}
 	trades := models.RetrieveTrades(TRADESPATH)
 	trade := models.RetrieveTrade(msg.TradeID, trades)
-	if trade == nil {
+	p2 := models.RetrievePlayerByName(trade.PlayerB, players)
+	if trade == nil || p2 == nil{
 		return nil
 	}
 	id := -1
@@ -104,8 +105,7 @@ func AcceptTrade(msg communication.TradeMessage) *[]byte {
 	}
 
 	id = 0
-	p2 := models.RetrievePlayerByName(trade.PlayerB, players)
-	if id >= 0 && p2 != nil{
+	if id >= 0{
 		p2.Cards = append(p2.Cards[:id], p2.Cards[id+1:]...)
 		p2.Cards = append(p2.Cards, trade.CardA)
 	}
