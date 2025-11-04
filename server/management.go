@@ -88,30 +88,40 @@ func AcceptTrade(msg communication.TradeMessage) *[]byte {
 	}
 	trades := models.RetrieveTrades(TRADESPATH)
 	trade := models.RetrieveTrade(msg.TradeID, trades)
-	p2 := models.RetrievePlayerByName(trade.PlayerB, players)
-	if trade == nil || p2 == nil{
+	if trade == nil {
 		return nil
 	}
-	id := -1
-	for _, c := range player.Cards {
+	p2 := models.RetrievePlayerByName(trade.PlayerB, players)
+	if p2 == nil {
+		return nil
+	}
+	idA := -1
+	idB := -1
+	for i, c := range player.Cards {
 		if c == trade.CardA {
-			id = c
+			idA = i
 			break
 		}
 	}
-	if id >= 0 {
-		player.Cards = append(player.Cards[:id], player.Cards[id+1:]...)
-		player.Cards = append(player.Cards, trade.CardB)
+	for i, c := range p2.Cards {
+		if c == trade.CardB {
+			idB = i
+			break
+		}
 	}
+	if idB < 0 || idA < 0 {
+		return nil
+	}
+	player.Cards = append(player.Cards[:idA], player.Cards[idA+1:]...)
+	player.Cards = append(player.Cards, trade.CardB)
 
-	id = 0
-	if id >= 0{
-		p2.Cards = append(p2.Cards[:id], p2.Cards[id+1:]...)
-		p2.Cards = append(p2.Cards, trade.CardA)
-	}
+	p2.Cards = append(p2.Cards[:idB], p2.Cards[idB+1:]...)
+	p2.Cards = append(p2.Cards, trade.CardA)
 
 	trade.Accepted = true
 	trades = models.UpdateTrade(*trade, trades)
+	models.UpdatePlayer(player.Password, *player, players)
+	models.UpdatePlayer(p2.Password, *p2, players)
 	models.SaveTrades(TRADESPATH, trades)
 	models.SavePlayers(PLAYERSPATH, players)
 	bytes, _ := json.Marshal(*trade)

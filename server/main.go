@@ -280,7 +280,7 @@ func propagate(command api.Command) {
 func subscribeChannels(broker net.Conn) bool {
 	topics := []string{"login", "signup", "buy",
 		"createTrade", "acceptTrade", "tradableCards", "denyTrade",
-		"sujestTrade", "enqueue", "playCard", "getMatchData", "surrender", "getCards"}
+		"suggestTrade", "enqueue", "playCard", "getMatchData", "surrender", "getCards"}
 
 	for _, topic := range topics {
 		message := communication.Message{
