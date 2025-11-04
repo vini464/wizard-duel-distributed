@@ -103,6 +103,29 @@ func ReceiveMessage(conn net.Conn, message *Message) error {
 	return err
 }
 
+func ReceiveBytes(conn net.Conn) []byte {
+	header := make([]byte, 4)
+	bytes_received := 0
+	for bytes_received < len(header) {
+		readed, err := conn.Read(header[bytes_received:])
+		if err != nil {
+			return nil
+		}
+		bytes_received += readed
+	}
+	// second: Receives the data
+	data := make([]byte, int(binary.BigEndian.Uint32(header)))
+	bytes_received = 0
+	for bytes_received < len(data) {
+		readed, err := conn.Read(data[bytes_received:])
+		if err != nil {
+			return nil
+		}
+		bytes_received += readed
+	}
+	return data
+}
+
 func UnmarshalMessage[T MSG](bytes []byte, message *T) error{
 	err := json.Unmarshal(bytes, message)
 	return err
