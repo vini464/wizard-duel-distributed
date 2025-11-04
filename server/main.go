@@ -66,11 +66,10 @@ func runCommand(command api.Command) {
 		players := models.RetrievePlayers(PLAYERSPATH)
 		var player models.Player
 		json.Unmarshal(command.Value, &player)
-
-		switch command.Operation {
-		case "create":
+		found := models.RetrievePlayerByName(player.Username, players)
+		if found == nil {
 			players = append(players, player)
-		case "update":
+		} else {
 			models.UpdatePlayer(player.Password, player, players)
 		}
 		models.SavePlayers(PLAYERSPATH, players)
@@ -78,10 +77,10 @@ func runCommand(command api.Command) {
 		matches := models.RetrieveMatches(MATCHESPATH)
 		var match models.Match
 		json.Unmarshal(command.Value, &match)
-		switch command.Operation {
-		case "create":
+		found := models.RetrieveMatch(match.Id, matches)
+		if found == nil {
 			matches = append(matches, match)
-		case "update":
+		} else {
 			models.UpdateMatch(match, matches)
 		}
 		models.SaveMatches(MATCHESPATH, matches)
@@ -89,10 +88,10 @@ func runCommand(command api.Command) {
 		trades := models.RetrieveTrades(TRADESPATH)
 		var trade models.Trade
 		json.Unmarshal(command.Value, &trade)
-		switch command.Operation {
-		case "create":
+		found := models.RetrieveTrade(trade.Id, trades)
+		if found == nil {
 			trades = append(trades, trade)
-		case "update":
+		} else {
 			models.UpdateTrade(trade, trades)
 		}
 		models.SaveTrades(TRADESPATH, trades)
